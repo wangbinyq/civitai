@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { constants } from '~/server/common/constants';
 
 export enum TransactionType {
   Tip = 0,
@@ -20,6 +21,7 @@ export enum TransactionType {
   ClubDeposit = 16,
   Withdrawal = 17,
   Redeemable = 18,
+  Sell = 19,
 }
 
 const buzzAccountTypes = ['User', 'Club', 'Other'] as const;
@@ -30,6 +32,12 @@ export const getUserBuzzAccountSchema = z.object({
   // This is the user id
   accountId: z.number().min(0),
   accountType: z.enum(buzzAccountTypes).optional(),
+});
+
+export type GetEarnPotentialSchema = z.infer<typeof getEarnPotentialSchema>;
+export const getEarnPotentialSchema = z.object({
+  userId: z.number().min(0).optional(),
+  username: z.string().optional(),
 });
 
 export type GetUserBuzzAccountResponse = z.infer<typeof getUserBuzzAccountResponse>;
@@ -91,7 +99,7 @@ export const buzzTransactionSchema = z.object({
   toAccountId: z.number().optional(),
   type: z.nativeEnum(TransactionType),
   amount: z.number().min(1),
-  description: z.string().trim().nonempty().nullish(),
+  description: z.string().trim().max(100).nonempty().nullish(),
   details: z.object({}).passthrough().nullish(),
   entityId: z.number().optional(),
   entityType: z.string().optional(),
@@ -128,9 +136,19 @@ export const completeStripeBuzzPurchaseTransactionInput = z.object({
 
 export type UserBuzzTransactionInputSchema = z.infer<typeof userBuzzTransactionInputSchema>;
 
-export const userBuzzTransactionInputSchema = buzzTransactionSchema.omit({
-  type: true,
-});
+export const userBuzzTransactionInputSchema = buzzTransactionSchema
+  .omit({
+    type: true,
+  })
+  .superRefine((data) => {
+    if (
+      data.entityType &&
+      ['Image', 'Model', 'Article'].includes(data.entityType) &&
+      data.amount > constants.buzz.maxEntityTip
+    )
+      return false;
+    return true;
+  });
 
 export const getBuzzAccountSchema = z.object({
   accountId: z.number(),

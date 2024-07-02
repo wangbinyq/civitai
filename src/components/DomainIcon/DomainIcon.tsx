@@ -19,7 +19,8 @@ import {
   IconPigMoney,
   IconWorld,
   Icon as TablerIcon,
-  TablerIconsProps,
+  IconProps,
+  IconBrandLinkedin,
 } from '@tabler/icons-react';
 import { IconCivitai } from '~/components/SVG/IconCivitai';
 import { IconBrandHuggingFace } from '~/components/SVG/IconHuggingFace';
@@ -29,7 +30,7 @@ export function DomainIcon({
   url,
   domain,
   ...iconProps
-}: { url?: string; domain?: DomainLink } & TablerIconsProps) {
+}: { url?: string; domain?: DomainLink } & IconProps) {
   const type = url ? getDomainLinkType(url) : domain;
   const Icon = type ? tablerIconMap[type] : IconWorld;
   return <Icon {...iconProps} />;
@@ -57,4 +58,5 @@ const tablerIconMap: { [key in DomainLink]: TablerIcon } = {
   vk: IconBrandVk,
   bilibili: IconBrandBilibili,
   civitai: IconCivitai,
+  linkedin: IconBrandLinkedin,
 };

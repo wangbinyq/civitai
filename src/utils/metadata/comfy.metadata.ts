@@ -35,6 +35,7 @@ export const comfyMetadataProcessor = createMetadataProcessor({
       }
 
       if (node.class_type == 'KSampler') samplerNodes.push(node.inputs as SamplerNode);
+      if (node.class_type == 'KSampler (Efficient)') samplerNodes.push(node.inputs as SamplerNode);
 
       if (node.class_type == 'LoraLoader') {
         // Ignore lora nodes with strength 0
@@ -79,11 +80,14 @@ export const comfyMetadataProcessor = createMetadataProcessor({
     }
 
     const metadata: ImageMetaProps = {
-      prompt: getPromptText(initialSamplerNode.positive),
-      negativePrompt: getPromptText(initialSamplerNode.negative),
+      prompt: getPromptText(initialSamplerNode.positive, 'positive'),
+      negativePrompt: getPromptText(initialSamplerNode.negative, 'negative'),
       cfgScale: initialSamplerNode.cfg,
       steps: initialSamplerNode.steps,
-      seed: initialSamplerNode.seed,
+      seed: getNumberValue(initialSamplerNode.seed ?? initialSamplerNode.noise_seed, [
+        'Value',
+        'seed',
+      ]),
       sampler: initialSamplerNode.sampler_name,
       scheduler: initialSamplerNode.scheduler,
       denoise: initialSamplerNode.denoise,
@@ -97,14 +101,8 @@ export const comfyMetadataProcessor = createMetadataProcessor({
       versionIds,
       modelIds,
       // Converting to string to reduce bytes size
-      comfy: workflow ? JSON.stringify({ prompt, workflow }) : undefined,
+      comfy: `{"prompt": ${exif.prompt}, "workflow": ${exif.workflow}}`,
     };
-
-    // Handle control net apply
-    if (initialSamplerNode.positive.class_type === 'ControlNetApply') {
-      const conditioningNode = initialSamplerNode.positive.inputs.conditioning as ComfyNode;
-      metadata.prompt = conditioningNode.inputs.text as string;
-    }
 
     // Map to automatic1111 terms for compatibility
     a1111Compatability(metadata);
@@ -131,29 +129,39 @@ function a1111Compatability(metadata: ImageMetaProps) {
 
   // Model
   const models = metadata.models as string[];
-  if (models.length > 0) {
+  if (models && models.length > 0) {
     metadata.Model = models[0].replace(/\.[^/.]+$/, '');
   }
 }
 
-function getPromptText(node: ComfyNode): string {
+function getPromptText(node: ComfyNode, target: 'positive' | 'negative' = 'positive'): string {
+  if (node.class_type === 'ControlNetApply')
+    return getPromptText(node.inputs.conditioning as ComfyNode, target);
+
+  // Handle wildcard nodes
+  if (node.inputs?.populated_text) node.inputs.text = node.inputs.populated_text;
+
   if (node.inputs?.text) {
     if (typeof node.inputs.text === 'string') return node.inputs.text;
     if (typeof (node.inputs.text as ComfyNode).class_type !== 'undefined')
-      return getPromptText(node.inputs.text as ComfyNode);
+      return getPromptText(node.inputs.text as ComfyNode, target);
   }
   if (node.inputs?.text_g) {
     if (!node.inputs?.text_l || node.inputs?.text_l === node.inputs?.text_g)
       return node.inputs.text_g as string;
     return `${node.inputs.text_g}, ${node.inputs.text_l}`;
   }
+  if (node.inputs?.[`text_${target}`]) return node.inputs[`text_${target}`] as string;
   return '';
 }
 
 type ComfyNumber = ComfyNode | number;
-function getNumberValue(input: ComfyNumber) {
+function getNumberValue(input: ComfyNumber, valueNames = ['Value']) {
   if (typeof input === 'number') return input;
-  return input.inputs.Value as number;
+  for (const name of valueNames) {
+    if (typeof input.inputs[name] !== 'undefined') return input.inputs[name] as number;
+  }
+  return 0;
 }
 
 // #region [types]
@@ -164,6 +172,7 @@ type ComfyNode = {
 
 type SamplerNode = {
   seed: number;
+  noise_seed?: number;
   steps: number;
   cfg: number;
   sampler_name: string;

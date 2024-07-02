@@ -105,8 +105,9 @@ declare global {
   };
 
   interface Window {
-    logSignal: (target: string) => void;
+    logSignal: (target: string, selector?: (args: unknown) => unknown) => void;
     Twitch: any;
     isAuthed?: boolean;
+    authChecked?: boolean;
   }
 }

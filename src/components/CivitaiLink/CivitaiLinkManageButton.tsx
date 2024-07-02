@@ -1,6 +1,6 @@
 import { Box, DefaultMantineColor, Loader, RingProgress } from '@mantine/core';
 import { useHover } from '@mantine/hooks';
-import { IconCheck, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { IconCheck, IconScreenShare, IconTrash, IconX } from '@tabler/icons-react';
 import {
   CivitaiLinkResourceManager,
   CivitaiLinkResourceManagerProps,
@@ -29,16 +29,16 @@ const buttonStates: Record<string, ButtonStateFn> = {
   installed: ({ hovered, iconSize }) => ({
     icon: hovered ? <IconTrash size={iconSize} /> : <IconCheck size={iconSize} strokeWidth={2.5} />,
     color: hovered ? 'red' : 'green',
-    label: hovered ? 'Remove from SD' : 'Installed',
+    label: hovered ? 'Remove from Link' : 'Installed',
   }),
   notInstalled: ({ iconSize }) => ({
-    icon: <IconPlus strokeWidth={2.5} size={iconSize} />,
+    icon: <IconScreenShare strokeWidth={2.5} size={iconSize} />,
     color: 'blue',
-    label: 'Add to SD',
+    label: 'Send via Link',
   }),
 };
 
-type ButtonStateFn = (props: { hovered: boolean; progress?: number; iconSize?: number }) => {
+type ButtonStateFn = (props: { hovered?: boolean; progress?: number; iconSize?: number }) => {
   icon: JSX.Element;
   color: DefaultMantineColor;
   label: string;
@@ -81,7 +81,7 @@ export const CivitaiLinkManageButton = ({
 
         return (
           <CivitaiTooltip label={buttonState.label} {...tooltipProps}>
-            <Box>{children({ ref, onClick, ...buttonState })}</Box>
+            <Box w="100%">{children({ ref, onClick, ...buttonState })}</Box>
           </CivitaiTooltip>
         );
       }}

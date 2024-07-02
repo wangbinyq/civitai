@@ -44,6 +44,9 @@ import { processCreatorProgramImageGenerationRewards } from '~/server/jobs/proce
 import { processVaultItems } from '~/server/jobs/process-vault-items';
 import { clearVaultItems } from '~/server/jobs/clear-vault-items';
 import { jobQueueJobs } from '~/server/jobs/job-queue';
+import { nextauthCleanup } from '~/server/jobs/next-auth-cleanup';
+import { countReviewImages } from '~/server/jobs/count-review-images';
+import { rewardsAbusePrevention } from '~/server/jobs/rewards-abuse-prevention';
 
 export const jobs: Job[] = [
   scanFilesJob,
@@ -80,12 +83,15 @@ export const jobs: Job[] = [
   ...csamJobs,
   resourceGenerationAvailability,
   cacheCleanup,
+  rewardsAbusePrevention,
+  nextauthCleanup,
   applyTagRules,
   processCreatorProgramEarlyAccessRewards,
   processCreatorProgramImageGenerationRewards,
   processVaultItems,
   clearVaultItems,
   ...jobQueueJobs,
+  countReviewImages,
 ];
 
 const log = createLogger('jobs', 'green');
@@ -137,16 +143,16 @@ const querySchema = z.object({
 });
 
 async function isLocked(name: string) {
-  if (!isProd) return false;
+  if (!isProd || name === 'prepare-leaderboard') return false;
   return (await redis?.get(`job:${name}`)) === 'true';
 }
 
 async function lock(name: string, lockExpiration: number) {
-  if (!isProd) return;
+  if (!isProd || name === 'prepare-leaderboard') return;
   await redis?.set(`job:${name}`, 'true', { EX: lockExpiration });
 }
 
 async function unlock(name: string) {
-  if (!isProd) return;
+  if (!isProd || name === 'prepare-leaderboard') return;
   await redis?.del(`job:${name}`);
 }

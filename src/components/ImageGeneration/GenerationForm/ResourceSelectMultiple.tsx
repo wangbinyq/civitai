@@ -16,6 +16,7 @@ type ResourceSelectMultipleProps = {
   options?: ResourceSelectOptions;
   modalOpened?: boolean;
   onCloseModal?: () => void;
+  hideButton?: boolean;
 } & Omit<InputWrapperProps, 'children'>;
 
 const ResourceSelectMultiple = forwardRef<HTMLDivElement, ResourceSelectMultipleProps>(
@@ -28,6 +29,7 @@ const ResourceSelectMultiple = forwardRef<HTMLDivElement, ResourceSelectMultiple
       options = {},
       modalOpened,
       onCloseModal,
+      hideButton = false,
       ...inputWrapperProps
     },
     ref
@@ -45,7 +47,7 @@ const ResourceSelectMultiple = forwardRef<HTMLDivElement, ResourceSelectMultiple
         resources: _values.filter((x) => x.modelType === type),
       }))
       .filter((x) => !!x.resources.length);
-    const canAdd = !limit || limit >= _values.length;
+    const canAdd = !limit || _values.length < limit;
 
     const handleAdd = (resource: Generation.Resource) => {
       if (!canAdd) return;
@@ -96,7 +98,7 @@ const ResourceSelectMultiple = forwardRef<HTMLDivElement, ResourceSelectMultiple
 
     return (
       <Input.Wrapper {...inputWrapperProps} ref={ref}>
-        <Stack spacing="md">
+        <Stack spacing="md" mb={inputWrapperProps.error ? 5 : undefined}>
           {sortedGroups.map((group, index) => {
             return (
               <React.Fragment key={group.type}>
@@ -123,10 +125,15 @@ const ResourceSelectMultiple = forwardRef<HTMLDivElement, ResourceSelectMultiple
               </React.Fragment>
             );
           })}
-          {canAdd && (
+          {canAdd && !hideButton && (
             <Button variant="light" leftIcon={<IconPlus size={18} />} onClick={handleOpenModal}>
               {buttonLabel}
             </Button>
+          )}
+          {hideButton && !_values.length && (
+            <Text color="dimmed" size="sm">
+              No resources selected
+            </Text>
           )}
         </Stack>
       </Input.Wrapper>

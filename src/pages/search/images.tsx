@@ -1,5 +1,5 @@
 import { Box, Center, Loader, Stack, Text, ThemeIcon, Title } from '@mantine/core';
-import { useInstantSearch } from 'react-instantsearch';
+import { RefinementListProps, useInstantSearch } from 'react-instantsearch';
 import {
   BrowsingLevelFilter,
   ChipRefinementList,
@@ -20,6 +20,7 @@ import { MasonryColumns } from '~/components/MasonryColumns/MasonryColumns';
 import { ImagesCard } from '~/components/Image/Infinite/ImagesCard';
 import { useInfiniteHitsTransformed } from '~/components/Search/search.utils2';
 import { useApplyHiddenPreferences } from '~/components/HiddenPreferences/useApplyHiddenPreferences';
+import { MediaType } from '@prisma/client';
 
 export default function ImageSearch() {
   return (
@@ -34,6 +35,10 @@ export default function ImageSearch() {
     </SearchLayout.Root>
   );
 }
+
+const filterMediaTypesOptions: RefinementListProps['transformItems'] = (items) => {
+  return items.filter((item) => item.value !== MediaType.audio);
+};
 
 function RenderFilters() {
   return (
@@ -52,6 +57,13 @@ function RenderFilters() {
       />
       <DateRangeRefinement title="Filter by Creation Date" attribute="createdAtUnix" />
       <ChipRefinementList
+        title="Filter by Media Type"
+        sortBy={['name']}
+        operator="or"
+        attribute="type"
+        transformItems={filterMediaTypesOptions}
+      />
+      <ChipRefinementList
         title="Filter by Aspect Ratio"
         sortBy={['name']}
         attribute="aspectRatio"
@@ -64,7 +76,7 @@ function RenderFilters() {
       />
       <SearchableMultiSelectRefinementList
         title="Tags"
-        attribute="tags.name"
+        attribute="tagNames"
         operator="and"
         searchable={true}
       />

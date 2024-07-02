@@ -1,8 +1,10 @@
+import { TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { isProd } from '~/env/other';
 import { purgeCache } from '~/server/cloudflare/client';
+import { CacheTTL } from '~/server/common/constants';
 import { logToAxiom } from '~/server/logging/client';
-import { redis } from '~/server/redis/client';
+import { redis, REDIS_KEYS } from '~/server/redis/client';
 import { UserPreferencesInput } from '~/server/schema/base.schema';
 import { getAllHiddenForUser } from '~/server/services/user-preferences.service';
 import { middleware } from '~/server/trpc';
@@ -78,6 +80,36 @@ export function cacheIt<TInput extends object>({
   });
 }
 
+export type RateLimit = {
+  limit?: number;
+  period?: number; // seconds
+};
+export function rateLimit({ limit, period }: RateLimit) {
+  limit ??= 10;
+  period ??= CacheTTL.md;
+
+  return middleware(async ({ ctx, next, path }) => {
+    const cacheKey = `trpc:limit:${path.replace('.', ':')}`;
+    const hashKey = ctx.user?.id?.toString() ?? ctx.ip;
+    const attempts = JSON.parse((await redis.hGet(cacheKey, hashKey)) ?? '[]').map(
+      Number
+    ) as number[];
+    const cutoff = Date.now() - period! * 1000;
+    const relevantAttempts = attempts.filter((x) => x > cutoff);
+    if (relevantAttempts.length >= limit!) {
+      throw new TRPCError({
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Rate limit exceeded',
+      });
+    }
+
+    relevantAttempts.push(Date.now());
+    await redis.hSet(cacheKey, hashKey, JSON.stringify(relevantAttempts));
+    await redis.sAdd('trpc:limit:keys', cacheKey);
+    return await next();
+  });
+}
+
 export type EdgeCacheItProps = {
   ttl?: number;
   expireAt?: () => Date;
@@ -100,7 +132,20 @@ export function edgeCacheIt({ ttl = 60 * 3, expireAt, tags }: EdgeCacheItProps =
       ctx.cache.browserTTL = isProd ? Math.min(60, reqTTL) : 0;
       ctx.cache.edgeTTL = reqTTL;
       ctx.cache.staleWhileRevalidate = 30;
-      ctx.cache.tags = tags?.(input).map((x) => slugit(x));
+      const cacheTags = tags?.(input).map((x) => slugit(x));
+      if (cacheTags) {
+        if (ctx.req?.url) {
+          await Promise.all(
+            cacheTags
+              .map((tag) => {
+                const key = REDIS_KEYS.CACHES.EDGE_CACHED + ':' + tag;
+                return [redis.sAdd(key, ctx.req.url!), redis.expire(key, ttl)];
+              })
+              .flat()
+          );
+        }
+        ctx.cache.tags = cacheTags;
+      }
     }
 
     return result;

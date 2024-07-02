@@ -1,12 +1,12 @@
 import { ImageMetaProps } from '~/server/schema/image.schema';
-import { normalizeText, trimNonAlphanumeric } from '~/utils/string-helpers';
+import { trimNonAlphanumeric } from '~/utils/string-helpers';
+import { normalizeText } from '~/utils/normalize-text';
 import blockedNSFW from './lists/blocklist-nsfw.json';
 import blocked from './lists/blocklist.json';
 import nsfwWords from './lists/words-nsfw.json';
 import youngWords from './lists/words-young.json';
 import poiWords from './lists/words-poi.json';
 import promptTags from './lists/prompt-tags.json';
-import he from 'he';
 
 // #region [audit]
 const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -38,12 +38,13 @@ export const auditMetaData = (meta: ImageMetaProps | undefined, nsfw: boolean) =
   return { blockedFor, success: !blockedFor.length };
 };
 
-export const auditPrompt = (prompt: string) => {
+export const auditPrompt = (prompt: string, negativePrompt?: string) => {
   prompt = normalizeText(prompt); // Parse HTML Entities
+  negativePrompt = normalizeText(negativePrompt);
   const { found, age } = includesMinorAge(prompt);
   if (found) return { blockedFor: [`${age} year old`], success: false };
 
-  const inappropriate = includesInappropriate(prompt);
+  const inappropriate = includesInappropriate({ prompt, negativePrompt });
   if (inappropriate === 'minor')
     return { blockedFor: ['Inappropriate minor content'], success: false };
   else if (inappropriate === 'poi')
@@ -204,31 +205,43 @@ export function promptWordReplace(prompt: string, word: string, replacement = ''
 
 type Checkable = { regex: RegExp; word: string };
 type MatcherFn = (prompt: string, checkable: Checkable) => string | false;
-export function checkable(words: string[], options?: { pluralize?: boolean; matcher?: MatcherFn }) {
+type PreprocessorFn = (word: string) => string;
+export function checkable(
+  words: string[],
+  options?: { pluralize?: boolean; matcher?: MatcherFn; preprocessor?: PreprocessorFn }
+) {
   const regexes = words.map((word) => {
     const regex = prepareWordRegex(word, options?.pluralize);
     return { regex, word } as Checkable;
   });
-  function inPrompt(prompt: string, matcher?: MatcherFn) {
+  function preprocessor(prompt: string) {
     prompt = prompt.trim();
+    if (options?.preprocessor) return options.preprocessor(prompt);
+    return prompt;
+  }
+
+  function inPrompt(prompt: string, matcher?: MatcherFn) {
+    prompt = preprocessor(prompt);
+    matcher ??= options?.matcher;
     for (const { regex, word } of regexes) {
-      if (options?.matcher) {
-        const result = (matcher ?? options.matcher)(prompt, { regex, word });
+      if (matcher) {
+        const result = matcher(prompt, { regex, word });
         if (result !== false) return result;
+        else continue;
       }
       if (regex.test(prompt)) return word;
     }
     return false;
   }
   function highlight(prompt: string, replaceFn: (word: string) => string) {
-    prompt = prompt.trim();
+    const target = preprocessor(prompt);
     for (const { regex } of regexes) {
-      if (regex.test(prompt)) {
-        const match = regex.exec(prompt);
+      if (regex.test(target)) {
+        const match = regex.exec(target);
         const word = trimNonAlphanumeric(match?.[0]);
         if (!word) continue;
         // prompt = prompt.replace(word, replaceFn(word));
-        prompt = highlightReplacement(prompt, match, replaceFn);
+        prompt = highlightReplacement(target, match, replaceFn);
       }
     }
     return prompt;
@@ -272,8 +285,13 @@ const words = {
     nouns: checkable(youngWords.nouns.concat(composedNouns), {
       pluralize: true,
     }),
+    negativeNouns: checkable(youngWords.negativeNouns, {
+      pluralize: true,
+    }),
   },
-  poi: checkable(poiWords),
+  poi: checkable(poiWords, {
+    preprocessor: (word) => word.replace(/[^\w\s\|\:\[\]]/g, ''),
+  }),
   tags: Object.entries(promptTags).map(([tag, words]) => ({ tag, words: checkable(words) })),
 };
 
@@ -298,52 +316,71 @@ export function includesPoi(prompt: string | undefined, includeEdit = false) {
   if (!prompt) return false;
   let matcher = undefined;
   if (!includeEdit)
-    matcher = (prompt: string, checkable: Checkable) =>
-      !inPromptEdit(prompt, checkable) ? checkable.word : false;
+    matcher = (prompt: string, checkable: Checkable) => {
+      if (inPromptEdit(prompt, checkable)) return false;
+      const found = checkable.regex.test(prompt);
+      if (found) return checkable.word;
+      return false;
+    };
 
   return words.poi.inPrompt(prompt, matcher);
 }
 
-export function includesMinor(prompt: string | undefined) {
+export function includesMinor(prompt: string | undefined, negativePrompt?: string) {
   if (!prompt) return false;
 
-  return includesMinorAge(prompt).found || words.young.nouns.inPrompt(prompt);
+  return (
+    includesMinorAge(prompt).found ||
+    words.young.nouns.inPrompt(prompt) ||
+    (negativePrompt && words.young.negativeNouns.inPrompt(negativePrompt))
+  );
 }
 
-export function includesInappropriate(prompt: string | undefined, nsfw?: boolean) {
-  if (!prompt) return false;
-  prompt = prompt.replace(/'|\.|\-/g, '');
-  if (!nsfw && !includesNsfw(prompt)) return false;
-  if (includesPoi(prompt)) return 'poi';
-  if (includesMinor(prompt)) return 'minor';
+export function includesInappropriate(
+  input: { prompt?: string; negativePrompt?: string },
+  nsfw?: boolean
+) {
+  if (!input.prompt) return false;
+  input.prompt = input.prompt.replace(/'|\.|\-/g, '');
+  if (!nsfw && !includesNsfw(input.prompt)) return false;
+  if (includesPoi(input.prompt)) return 'poi';
+  if (includesMinor(input.prompt, input.negativePrompt)) return 'minor';
   return false;
 }
 
 // #endregion [inappropriate]
 
 // #region [highlight]
-const highlighters = [
-  {
-    color: '#7950F2',
-    fn: highlightMinor,
-  },
-  {
-    color: '#339AF0',
-    fn: words.young.nouns.highlight,
-  },
-  {
-    color: '#38d9a9',
-    fn: words.poi.highlight,
-  },
-  {
-    color: '#F03E3E',
-    fn: highlightBlocked,
-  },
-  {
-    color: '#FD7E14',
-    fn: words.nsfw.highlight,
-  },
-];
+const highlighters = {
+  positive: [
+    {
+      color: '#7950F2',
+      fn: highlightMinor,
+    },
+    {
+      color: '#339AF0',
+      fn: words.young.nouns.highlight,
+    },
+    {
+      color: '#38d9a9',
+      fn: words.poi.highlight,
+    },
+    {
+      color: '#F03E3E',
+      fn: highlightBlocked,
+    },
+    {
+      color: '#FD7E14',
+      fn: words.nsfw.highlight,
+    },
+  ],
+  negative: [
+    {
+      color: '#339AF0',
+      fn: words.young.negativeNouns.highlight,
+    },
+  ],
+};
 
 function highlightReplacement(
   prompt: string,
@@ -386,11 +423,24 @@ function highlightMinor(prompt: string, replaceFn: (word: string) => string) {
   return prompt;
 }
 
-export function highlightInappropriate(prompt: string | undefined) {
+export function highlightInappropriate({
+  prompt,
+  negativePrompt,
+}: {
+  prompt?: string;
+  negativePrompt?: string;
+}) {
   if (!prompt) return prompt;
-  for (const { fn, color } of highlighters) {
+  for (const { fn, color } of highlighters.positive) {
     prompt = fn(prompt, (word) => `<span style="color: ${color}">${word}</span>`);
   }
+  if (negativePrompt) {
+    for (const { fn, color } of highlighters.negative) {
+      negativePrompt = fn(negativePrompt, (word) => `<span style="color: ${color}">${word}</span>`);
+    }
+    prompt += `<br><br><span style="color: #777">Negative Prompt:</span><br>${negativePrompt}`;
+  }
+
   return prompt;
 }
 // #endregion [highlight]

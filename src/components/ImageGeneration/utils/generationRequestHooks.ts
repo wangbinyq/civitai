@@ -1,14 +1,9 @@
 import { InfiniteData } from '@tanstack/react-query';
 import { getQueryKey } from '@trpc/react-query';
 import produce from 'immer';
-import { GetGenerationRequestsReturn } from '~/server/services/generation/generation.service';
-import { showErrorNotification } from '~/utils/notifications';
-import { queryClient, trpc } from '~/utils/trpc';
 import { useEffect, useMemo } from 'react';
-import { GetGenerationRequestsInput } from '~/server/schema/generation.schema';
-import { createDebouncer, useDebouncer } from '~/utils/debouncer';
+import { z } from 'zod';
 import { useSignalConnection } from '~/components/Signals/SignalsProvider';
-import { SignalMessages, GenerationRequestStatus } from '~/server/common/enums';
 import { useCurrentUser } from '~/hooks/useCurrentUser';
 import {
   JobStatus,
@@ -16,9 +11,13 @@ import {
   TextToImageEvent,
   textToImageEventSchema,
 } from '~/libs/orchestrator/jobs';
-import { z } from 'zod';
-import { isDefined } from '~/utils/type-guards';
+import { GenerationRequestStatus, SignalMessages } from '~/server/common/enums';
+import { GetGenerationRequestsInput } from '~/server/schema/generation.schema';
+import { GetGenerationRequestsReturn } from '~/server/services/generation/generation.service';
 import { Generation } from '~/server/services/generation/generation.types';
+import { createDebouncer } from '~/utils/debouncer';
+import { showErrorNotification } from '~/utils/notifications';
+import { queryClient, trpc } from '~/utils/trpc';
 
 export const useGetGenerationRequests = (
   input?: GetGenerationRequestsInput,
@@ -44,7 +43,7 @@ export const useGetGenerationRequests = (
     if (!isLoading) updateFromEvents();
   }, [isLoading]);
 
-  return { data, requests, images, isLoading, ...rest };
+  return { data, requests, images, isLoading: !currentUser ? false : isLoading, ...rest };
 };
 
 export const updateGenerationRequest = (
@@ -111,6 +110,8 @@ export const useDeleteGenerationRequestImages = (
               const index = item.images?.findIndex((x) => x.id === id) ?? -1;
               if (index > -1) item.images?.splice(index, 1);
             }
+            if (item.images?.every((x) => x.available))
+              item.status = GenerationRequestStatus.Succeeded;
           }
           // if there are requests without images, remove the requests
           page.items = page.items.filter((x) => {
@@ -138,22 +139,19 @@ export function useTextToImageSignalUpdate() {
     SignalMessages.OrchestratorUpdate,
     (data: z.infer<typeof textToImageEventSchema>) => {
       if (data.jobType === JobType.TextToImage) {
-        if (data.type === JobStatus.Deleted) {
-          signalEvents = signalEvents.filter((x) => x.jobId !== data.jobId);
-        } else {
-          if (JobStatus) signalEventsDictionary[data.jobId] = data;
-          debouncer(() => updateFromEvents());
-        }
+        if (JobStatus) signalEventsDictionary[data.jobId] = data;
+        debouncer(() => updateFromEvents());
       }
     }
   );
 }
 
-let signalEvents: TextToImageEvent[] = [];
 const signalEventsDictionary: Record<string, TextToImageEvent> = {};
 
 const jobStatusMap: Partial<Record<JobStatus, Generation.ImageStatus>> = {
   [JobStatus.Claimed]: 'Started',
+  [JobStatus.Deleted]: 'Cancelled',
+  [JobStatus.Canceled]: 'Cancelled',
   [JobStatus.Failed]: 'Error',
   [JobStatus.Rejected]: 'Error',
   [JobStatus.Succeeded]: 'Success',
@@ -202,6 +200,8 @@ function updateFromEvents() {
             item.status = GenerationRequestStatus.Error;
           else if (statuses.every((status) => status === 'Success'))
             item.status = GenerationRequestStatus.Succeeded;
+          else if (statuses.every((status) => status === 'Cancelled'))
+            item.status = GenerationRequestStatus.Cancelled;
 
           item.images = item.images?.sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
         }

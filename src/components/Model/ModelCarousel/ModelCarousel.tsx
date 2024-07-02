@@ -42,13 +42,13 @@ const useStyles = createStyles((theme) => ({
   },
   carousel: {
     display: 'block',
-    [containerQuery.smallerThan('md')]: {
+    [containerQuery.smallerThan('sm')]: {
       display: 'none',
     },
   },
   mobileBlock: {
     display: 'block',
-    [containerQuery.largerThan('md')]: {
+    [containerQuery.largerThan('sm')]: {
       display: 'none',
     },
   },
@@ -77,10 +77,10 @@ const useStyles = createStyles((theme) => ({
     bottom: 6,
     left: 6,
     borderRadius: theme.radius.sm,
-    background: theme.fn.rgba(
-      theme.colorScheme === 'dark' ? theme.colors.dark[9] : theme.colors.gray[0],
-      0.8
-    ),
+    background:
+      theme.colorScheme === 'dark'
+        ? theme.fn.rgba(theme.colors.dark[6], 0.6)
+        : theme.colors.gray[0],
     // backdropFilter: 'blur(13px) saturate(160%)',
     boxShadow: '0 -2px 6px 1px rgba(0,0,0,0.16)',
     padding: 4,
@@ -158,10 +158,10 @@ function ModelCarouselContent({
       className={cx(!mobile && classes.carousel, mobile && classes.mobileBlock)}
       classNames={classes}
       slideSize="50%"
-      breakpoints={[{ maxWidth: 'sm', slideSize: '100%', slideGap: 2 }]}
+      breakpoints={[{ maxWidth: 'md', slideSize: '100%', slideGap: 2 }]}
       slideGap="xl"
       align={images.length > 2 ? 'start' : 'center'}
-      slidesToScroll={mobile ? 1 : 2}
+      slidesToScroll="auto"
       withControls={images.length > 2 ? true : false}
       controlSize={mobile ? 32 : 56}
       loop
@@ -175,10 +175,10 @@ function ModelCarouselContent({
                 <ImageGuard2 image={image} connectType="model" connectId={modelId}>
                   {(safe) => (
                     <>
-                      <ImageGuard2.BlurToggle className="absolute top-2 left-2 z-10" />
-                      <Stack spacing="xs" align="flex-end" className="absolute top-2 right-2 z-10">
+                      <ImageGuard2.BlurToggle className="absolute left-2 top-2 z-10" />
+                      <Stack spacing="xs" align="flex-end" className="absolute right-2 top-2 z-10">
                         <ImageContextMenu image={image} />
-                        {features.imageGeneration && image.meta && (
+                        {features.imageGeneration && image.meta && !image.hideMeta && (
                           <HoverActionButton
                             label="Remix"
                             size={30}
