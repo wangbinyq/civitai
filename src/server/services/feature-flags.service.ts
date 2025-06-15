@@ -25,7 +25,7 @@ const featureAvailability = [
   ...roleAvailablity,
 ] as const;
 const featureFlags = createFeatureFlags({
-  canWrite: ['mod'],
+  canWrite: ['public'],
   earlyAccessModel: ['public'],
   apiKeys: ['public'],
   ambientCard: ['public'],
@@ -74,8 +74,8 @@ const featureFlags = createFeatureFlags({
   bounties: ['public'],
   newsroom: ['public'],
   safety: ['public'],
-  csamReports: ['granted'],
-  appealReports: ['granted'],
+  csamReports: isDev ? ['mod'] : ['granted'],
+  appealReports: isDev ? ['mod'] : ['granted'],
   reviewTrainingData: isDev ? ['mod'] : ['granted'],
   clubs: ['mod'],
   createClubs: ['mod', 'granted'],
@@ -122,7 +122,9 @@ const featureFlags = createFeatureFlags({
   annualMemberships: ['public'],
   disablePayments: ['public'],
   coinbasePayments: ['public'],
+  coinbaseOnramp: ['mod'],
   nowpaymentPayments: [],
+  thirtyDayEarlyAccess: ['granted'],
 });
 
 export const featureFlagKeys = Object.keys(featureFlags) as FeatureFlagKey[];
