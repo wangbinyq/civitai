@@ -117,8 +117,6 @@ export function useWhatIfFromGraph({ enabled = true }: UseWhatIfFromGraphOptions
     });
   }, [snapshot, graph]);
 
-  console.log({ validationResult, snapshot });
-
   const canEstimateCost = validationResult?.success ?? false;
 
   // Build the query payload from validated data.
