@@ -11,7 +11,7 @@ import {
 import clsx from 'clsx';
 import type { EmblaCarouselType } from 'embla-carousel';
 import type { DragEvent, MouseEvent } from 'react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useDialogContext } from '~/components/Dialog/DialogProvider';
 import { dialogStore } from '~/components/Dialog/dialogStore';
@@ -91,6 +91,7 @@ export function GeneratedImage({
         id: 'generated-image',
         component: GeneratedImageLightbox,
         props: { image },
+        target: '#main',
       });
     }
   };
@@ -285,68 +286,15 @@ export function GeneratedImage({
           )}
 
           {!image.blockedReason && (
-            <div
-              className={clsx(
-                classes.actionsWrapper,
-                isLightbox && image.type === 'video' ? 'bottom-2 left-12' : 'bottom-1 left-1',
-                'absolute flex flex-wrap items-center gap-1 p-1'
-              )}
-            >
-              <LegacyActionIcon
-                size="md"
-                className={state.favorite ? classes.favoriteButton : undefined}
-                variant={state.favorite ? 'light' : 'subtle'}
-                color={state.favorite ? 'red' : 'gray'}
-                onClick={() => handleToggleFavorite(!state.favorite)}
-              >
-                <IconHeart size={16} />
-              </LegacyActionIcon>
-
-              <Menu
-                zIndex={400}
-                trigger="hover"
-                openDelay={100}
-                closeDelay={100}
-                transitionProps={{
-                  transition: 'fade',
-                  duration: 150,
-                }}
-                withinPortal
-                position="top"
-              >
-                <Menu.Target>
-                  <LegacyActionIcon size="md">
-                    <IconWand size={16} />
-                  </LegacyActionIcon>
-                </Menu.Target>
-                <Menu.Dropdown className={classes.improveMenu}>
-                  <GeneratedItemWorkflowMenu
-                    step={step}
-                    image={image}
-                    workflowId={request.id}
-                    workflowsOnly
-                  />
-                </Menu.Dropdown>
-              </Menu>
-
-              <LegacyActionIcon
-                size="md"
-                variant={state.feedback === 'liked' ? 'light' : 'subtle'}
-                color={state.feedback === 'liked' ? 'green' : 'gray'}
-                onClick={() => handleToggleFeedback('liked')}
-              >
-                <IconThumbUp size={16} />
-              </LegacyActionIcon>
-
-              <LegacyActionIcon
-                size="md"
-                variant={state.feedback === 'disliked' ? 'light' : 'subtle'}
-                color={state.feedback === 'disliked' ? 'red' : 'gray'}
-                onClick={() => handleToggleFeedback('disliked')}
-              >
-                <IconThumbDown size={16} />
-              </LegacyActionIcon>
-            </div>
+            <GeneratedImageActions
+              image={image}
+              step={step}
+              workflowId={request.id}
+              state={state}
+              isLightbox={isLightbox}
+              onToggleFavorite={handleToggleFavorite}
+              onToggleFeedback={handleToggleFeedback}
+            />
           )}
           {!isLightbox && (
             <div className="absolute bottom-2 right-2">
@@ -373,6 +321,94 @@ export function GeneratedImage({
   );
 }
 
+function GeneratedImageActions({
+  image,
+  step,
+  workflowId,
+  state,
+  isLightbox,
+  onToggleFavorite,
+  onToggleFeedback,
+}: {
+  image: NormalizedGeneratedImage;
+  step: Omit<NormalizedGeneratedImageStep, 'images'>;
+  workflowId: string;
+  state: { favorite?: boolean; feedback?: string };
+  isLightbox?: boolean;
+  onToggleFavorite: (value: boolean) => void;
+  onToggleFeedback: (feedback: 'liked' | 'disliked') => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <div
+      className={clsx(
+        classes.actionsWrapper,
+        menuOpen && classes.actionsVisible,
+        isLightbox && image.type === 'video' ? 'bottom-2 left-12' : 'bottom-1 left-1',
+        'absolute flex flex-wrap items-center gap-1 p-1'
+      )}
+    >
+      <LegacyActionIcon
+        size="md"
+        className={state.favorite ? classes.favoriteButton : undefined}
+        variant={state.favorite ? 'light' : 'subtle'}
+        color={state.favorite ? 'red' : 'gray'}
+        onClick={() => onToggleFavorite(!state.favorite)}
+      >
+        <IconHeart size={16} />
+      </LegacyActionIcon>
+
+      <Menu
+        zIndex={400}
+        trigger="hover"
+        openDelay={100}
+        closeDelay={100}
+        transitionProps={{
+          transition: 'fade',
+          duration: 150,
+        }}
+        withinPortal
+        position="top"
+        onChange={setMenuOpen}
+        withArrow
+      >
+        <Menu.Target>
+          <LegacyActionIcon size="md">
+            <IconWand size={16} />
+          </LegacyActionIcon>
+        </Menu.Target>
+        <Menu.Dropdown className={classes.improveMenu}>
+          <GeneratedItemWorkflowMenu
+            step={step}
+            image={image}
+            workflowId={workflowId}
+            workflowsOnly
+          />
+        </Menu.Dropdown>
+      </Menu>
+
+      <LegacyActionIcon
+        size="md"
+        variant={state.feedback === 'liked' ? 'light' : 'subtle'}
+        color={state.feedback === 'liked' ? 'green' : 'gray'}
+        onClick={() => onToggleFeedback('liked')}
+      >
+        <IconThumbUp size={16} />
+      </LegacyActionIcon>
+
+      <LegacyActionIcon
+        size="md"
+        variant={state.feedback === 'disliked' ? 'light' : 'subtle'}
+        color={state.feedback === 'disliked' ? 'red' : 'gray'}
+        onClick={() => onToggleFeedback('disliked')}
+      >
+        <IconThumbDown size={16} />
+      </LegacyActionIcon>
+    </div>
+  );
+}
+
 export function GeneratedImageLightbox({ image }: { image: NormalizedGeneratedImage }) {
   const dialog = useDialogContext();
   const { requests, steps } = useGetTextToImageRequestsImages();
@@ -394,10 +430,23 @@ export function GeneratedImageLightbox({ image }: { image: NormalizedGeneratedIm
   );
   const workflows = requests?.map(({ steps, ...workflow }) => workflow) ?? [];
 
-  const [slide, setSlide] = useState(() => {
-    const initialSlide = images.findIndex((item) => item.id === image.id);
-    return initialSlide > -1 ? initialSlide : 0;
-  });
+  const currentImageIdRef = useRef(image.id);
+  const initialSlide = images.findIndex((item) => item.id === image.id);
+  const [slide, setSlide] = useState(initialSlide > -1 ? initialSlide : 0);
+
+  const handleSlideChange = (index: number) => {
+    setSlide(index);
+    if (images[index]) currentImageIdRef.current = images[index].id;
+  };
+
+  // When images array shifts, re-sync slide index to the tracked image
+  useEffect(() => {
+    const newIndex = images.findIndex((item) => item.id === currentImageIdRef.current);
+    if (newIndex !== -1 && newIndex !== slide) {
+      embla?.scrollTo(newIndex, true);
+      setSlide(newIndex);
+    }
+  }, [images, embla]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Modal
@@ -414,7 +463,7 @@ export function GeneratedImageLightbox({ image }: { image: NormalizedGeneratedIm
           controlSize={40}
           startIndex={slide}
           loop
-          onSlideChange={setSlide}
+          onSlideChange={handleSlideChange}
           withKeyboardEvents={false}
           setEmbla={setEmbla}
         >
