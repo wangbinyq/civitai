@@ -31,7 +31,6 @@ import {
   type ResourceData,
 } from './common';
 
-
 // =============================================================================
 // HiDream Variant/Precision Constants
 // =============================================================================
@@ -41,59 +40,6 @@ export type HiDreamPrecision = 'fp8' | 'fp16';
 
 /** HiDream variant type */
 export type HiDreamVariant = 'fast' | 'dev' | 'full';
-
-/** HiDream resource mapping */
-const hiDreamResources = [
-  { id: 1772448, variant: 'full' as const, precision: 'fp8' as const },
-  { id: 1771369, variant: 'dev' as const, precision: 'fp8' as const },
-  { id: 1770945, variant: 'fast' as const, precision: 'fp8' as const },
-  { id: 1768354, variant: 'full' as const, precision: 'fp16' as const },
-  { id: 1769068, variant: 'dev' as const, precision: 'fp16' as const },
-  { id: 1768731, variant: 'fast' as const, precision: 'fp16' as const },
-];
-
-/** Map from version ID to resource entry */
-const versionIdToResource = new Map(hiDreamResources.map((r) => [r.id, r]));
-
-/** Map from version ID to variant */
-const versionIdToVariant = new Map<number, HiDreamVariant>(
-  hiDreamResources.map((r) => [r.id, r.variant])
-);
-
-/** Options for precision selector */
-const precisionOptions = [
-  { label: 'FP8', value: 'fp8' },
-  { label: 'FP16', value: 'fp16' },
-];
-
-/** Options for variant selector (depends on precision) */
-const variantOptionsByPrecision: Record<
-  HiDreamPrecision,
-  Array<{ label: string; value: string }>
-> = {
-  fp8: [
-    { label: 'Fast', value: 'fast' },
-    { label: 'Dev', value: 'dev' },
-    { label: 'Full', value: 'full' },
-  ],
-  fp16: [
-    { label: 'Fast', value: 'fast' },
-    { label: 'Dev', value: 'dev' },
-  ],
-};
-
-/**
- * Resolve a HiDream version ID from precision + variant.
- * Handles the cascade: if the requested combo doesn't exist (e.g. fp16 full),
- * falls back to 'dev' for the given precision.
- */
-export function getHiDreamVersionId(precision: HiDreamPrecision, variant: HiDreamVariant): number {
-  const match = hiDreamResources.find((r) => r.precision === precision && r.variant === variant);
-  if (match) return match.id;
-  // Fallback: requested variant unavailable for this precision (e.g. fp16 + full)
-  const fallback = hiDreamResources.find((r) => r.precision === precision && r.variant === 'dev');
-  return fallback!.id;
-}
 
 // =============================================================================
 // Aspect Ratios
@@ -204,6 +150,15 @@ const hiDreamVersions: VersionGroup = {
   ],
 };
 
+/** Map from version ID to variant, derived from hiDreamVersions */
+const versionIdToVariant = new Map<number, HiDreamVariant>(
+  hiDreamVersions.options.flatMap((precision) =>
+    (precision.children?.options ?? []).map(
+      (opt) => [opt.value, opt.label.toLowerCase() as HiDreamVariant] as const
+    )
+  )
+);
+
 /**
  * HiDream family controls.
  *
@@ -236,6 +191,3 @@ export const hiDreamGraph = new DataGraph<
     dev: fastDevModeGraph,
     full: fullModeGraph,
   });
-
-// Export for use in components
-export { hiDreamResources, precisionOptions, variantOptionsByPrecision };

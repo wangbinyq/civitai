@@ -706,7 +706,12 @@ type BaseCheckpointValues = { workflow: string; ecosystem: string; model: Resour
 
 export function createCheckpointGraph(
   options?: CheckpointGraphOptions
-): DataGraph<BaseCheckpointCtx, GenerationCtx, { model: CheckpointModelMeta }, BaseCheckpointValues> {
+): DataGraph<
+  BaseCheckpointCtx,
+  GenerationCtx,
+  { model: CheckpointModelMeta },
+  BaseCheckpointValues
+> {
   // Get versions and defaultModelId from workflowVersions if provided
   // Use prefix matching: 'img2vid:ref2vid' matches 'img2vid' config
   const workflowConfig = findWorkflowConfig(options?.workflowVersions, options?.currentWorkflow);

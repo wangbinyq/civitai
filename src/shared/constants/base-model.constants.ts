@@ -941,14 +941,6 @@ const baseModelGenerationConfig: BaseModelGenerationConfig[] = [
     ],
   },
   {
-    group: 'Seedance15',
-    support: [{ modelTypes: [ModelType.Checkpoint], baseModels: ['Seedance 1.5'] }],
-  },
-  {
-    group: 'Seedance2',
-    support: [{ modelTypes: [ModelType.Checkpoint], baseModels: ['Seedance 2.0'] }],
-  },
-  {
     group: 'Veo3',
     support: [{ modelTypes: [ModelType.Checkpoint], baseModels: ['Veo 3'] }],
   },

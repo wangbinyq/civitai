@@ -2430,7 +2430,6 @@ export const baseModels: BaseModelRecord[] = [
     hidden: true,
     licenseId: 23,
   },
-
 ];
 
 export const baseModelById = new Map(baseModels.map((m) => [m.id, m]));

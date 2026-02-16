@@ -83,7 +83,7 @@ export function Queue() {
                 new images with our resources
               </Text>
               <Text size="sm" c="dimmed">
-                Some new filtering options don't apply retroactively.
+                {`Some new filtering options don't apply retroactively.`}
               </Text>
             </div>
           )}

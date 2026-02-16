@@ -89,13 +89,5 @@ export {
   type ImagesNodeConfig,
   type ImageSlotConfig,
 } from './common';
-export {
-  hiDreamGraph,
-  // Legacy exports — used by GenerationForm2.tsx via hidream.config.ts pattern
-  precisionOptions as hiDreamPrecisionOptions,
-  variantOptionsByPrecision as hiDreamVariantOptionsByPrecision,
-  getHiDreamVersionId,
-  type HiDreamPrecision,
-  type HiDreamVariant,
-} from './hi-dream-graph';
+export { hiDreamGraph } from './hi-dream-graph';
 export type { GenerationCtx } from './context';
