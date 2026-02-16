@@ -48,18 +48,9 @@ export type EcosystemSettings = {
   ecosystemId: number;
   defaults?: {
     model?: { id: number };
-    vae?: { id: number };
-    engine?: string;
-    sampler?: string;
-    steps?: number;
-    cfg?: number;
-    width?: number;
-    height?: number;
     /** If true, the model cannot be changed by the user (used for video ecosystems) */
     modelLocked?: boolean;
   };
-  // TODO: Input constraints - needs more iteration
-  // Complexity: constraints may depend on external context (e.g., membership tier)
 };
 
 export type CrossEcosystemRule = {
@@ -795,20 +786,12 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.SD1,
     defaults: {
       model: { id: 128713 },
-      width: 512,
-      height: 512,
-      cfg: 7,
-      steps: 25,
     },
   },
   {
     ecosystemId: ECO.SDXL,
     defaults: {
       model: { id: 128078 },
-      width: 1024,
-      height: 1024,
-      cfg: 7,
-      steps: 25,
     },
   },
   {
@@ -833,10 +816,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.Flux1,
     defaults: {
       model: { id: 691639 },
-      width: 1024,
-      height: 1024,
-      cfg: 1,
-      steps: 4,
     },
   },
   {
@@ -861,48 +840,37 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.Flux2Klein_9B,
     defaults: {
       model: { id: 2612554 },
-      width: 1024,
-      height: 1024,
     },
   },
   {
     ecosystemId: ECO.Flux2Klein_9B_base,
     defaults: {
       model: { id: 2612548 },
-      width: 1024,
-      height: 1024,
     },
   },
   {
     ecosystemId: ECO.Flux2Klein_4B,
     defaults: {
       model: { id: 2612557 },
-      width: 1024,
-      height: 1024,
     },
   },
   {
     ecosystemId: ECO.Flux2Klein_4B_base,
     defaults: {
       model: { id: 2612552 },
-      width: 1024,
-      height: 1024,
     },
   },
   {
     ecosystemId: ECO.Chroma,
     defaults: {
       model: { id: 2164239 },
-      width: 1024,
-      height: 1024,
     },
   },
   {
     ecosystemId: ECO.HiDream,
     defaults: {
       model: { id: 1771369 },
-      width: 1024,
-      height: 1024,
+      modelLocked: true,
     },
   },
   {
@@ -916,21 +884,18 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.HyV1,
     defaults: {
       model: { id: 1314512 },
-      engine: 'hunyuan',
       modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.WanVideo,
     defaults: {
-      engine: 'wan',
       modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.WanVideo1_3B_T2V,
     defaults: {
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -938,7 +903,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo14B_T2V,
     defaults: {
       model: { id: 1707796 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -946,7 +910,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo14B_I2V_480p,
     defaults: {
       model: { id: 1501125 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -954,7 +917,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo14B_I2V_720p,
     defaults: {
       model: { id: 1501344 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -962,7 +924,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo22_TI2V_5B,
     defaults: {
       model: { id: 2114110 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -970,7 +931,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo22_I2V_A14B,
     defaults: {
       model: { id: 2114157 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -978,7 +938,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo22_T2V_A14B,
     defaults: {
       model: { id: 2114154 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -986,7 +945,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo25_T2V,
     defaults: {
       model: { id: 2254989 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -994,7 +952,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.WanVideo25_I2V,
     defaults: {
       model: { id: 2254963 },
-      engine: 'wan',
       modelLocked: true,
     },
   },
@@ -1009,7 +966,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.LTXV,
     defaults: {
       model: { id: 1499827 },
-      engine: 'lightricks',
       modelLocked: true,
     },
   },
@@ -1017,7 +973,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.LTXV2,
     defaults: {
       model: { id: 2734043 },
-      engine: 'ltx2',
       modelLocked: true,
     },
   },
@@ -1025,7 +980,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.Veo3,
     defaults: {
       model: { id: 1885367 },
-      engine: 'veo3',
       modelLocked: true,
     },
   },
@@ -1057,16 +1011,12 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.ZImageTurbo,
     defaults: {
       model: { id: 2442439 },
-      width: 1024,
-      height: 1024,
     },
   },
   {
     ecosystemId: ECO.ZImageBase,
     defaults: {
       model: { id: 2635223 },
-      width: 1024,
-      height: 1024,
     },
   },
   {
@@ -1113,8 +1063,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.Other,
     defaults: {
       model: { id: 164821 },
-      width: 1024,
-      height: 1024,
     },
   },
 ];
@@ -2704,20 +2652,6 @@ export function getEcosystemDefaults(
   };
 }
 
-/**
- * Get default model ID for an ecosystem
- */
-export function getDefaultModelId(ecosystemId: number): number | undefined {
-  const model = getEcosystemSetting(ecosystemId, 'model');
-  return model?.id;
-}
-
-/**
- * Get default engine for an ecosystem
- */
-export function getDefaultEngine(ecosystemId: number): string | undefined {
-  return getEcosystemSetting(ecosystemId, 'engine');
-}
 
 // =============================================================================
 // Base Model Helpers
