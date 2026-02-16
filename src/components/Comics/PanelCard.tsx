@@ -1,8 +1,8 @@
 import { ActionIcon, Menu, Text } from '@mantine/core';
 import {
   IconAlertTriangle,
-  IconBug,
   IconDotsVertical,
+  IconEye,
   IconPhoto,
   IconPlus,
   IconRefreshDot,
@@ -25,7 +25,6 @@ export interface PanelCardProps {
   position: number;
   referenceNames: string[];
   onDelete: () => void;
-  onViewDebug: () => void;
   onRegenerate: () => void;
   onInsertAfter: () => void;
   onClick: () => void;
@@ -36,7 +35,6 @@ export function PanelCard({
   position,
   referenceNames,
   onDelete,
-  onViewDebug,
   onRegenerate,
   onInsertAfter,
   onClick,
@@ -68,6 +66,15 @@ export function PanelCard({
                     </ActionIcon>
                   </Menu.Target>
                   <Menu.Dropdown>
+                    <Menu.Item
+                      leftSection={<IconEye size={14} />}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        onClick();
+                      }}
+                    >
+                      View Details
+                    </Menu.Item>
                     {(status === 'Ready' || status === 'Failed') && (
                       <Menu.Item
                         leftSection={<IconRefreshDot size={14} />}
@@ -87,15 +94,6 @@ export function PanelCard({
                       }}
                     >
                       Insert after
-                    </Menu.Item>
-                    <Menu.Item
-                      leftSection={<IconBug size={14} />}
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        onViewDebug();
-                      }}
-                    >
-                      Debug Info
                     </Menu.Item>
                     <Menu.Item
                       color="red"

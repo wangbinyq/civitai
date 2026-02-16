@@ -26,7 +26,6 @@ import {
   IconAlertTriangle,
   IconArrowLeft,
   IconBook,
-  IconBug,
   IconEyeOff,
   IconGripVertical,
   IconPencil,
@@ -48,6 +47,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { slugit } from '~/utils/string-helpers';
 
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -58,7 +58,6 @@ import { getEdgeUrl } from '~/client-utils/cf-images-utils';
 import { HeroPositionPicker } from '~/components/Comics/HeroPositionPicker';
 import { MentionTextarea } from '~/components/Comics/MentionTextarea';
 import { PanelCard, SortablePanel } from '~/components/Comics/PanelCard';
-import { PanelDebugModal } from '~/components/Comics/PanelDebugModal';
 import { ReferenceSidebarItem } from '~/components/Comics/ReferenceSidebarItem';
 import { BuzzTransactionButton } from '~/components/Buzz/BuzzTransactionButton';
 import { dialogStore } from '~/components/Dialog/dialogStore';
@@ -244,9 +243,7 @@ function ProjectWorkspace() {
   const projectId = Number(id);
 
   const [panelModalOpened, { open: openPanelModal, close: closePanelModal }] = useDisclosure(false);
-  const [debugModalOpened, { open: openDebugModal, close: closeDebugModal }] = useDisclosure(false);
   const [settingsOpened, { open: openSettings, close: closeSettings }] = useDisclosure(false);
-  const [debugPanelId, setDebugPanelId] = useState<number | null>(null);
   const [prompt, setPrompt] = useState('');
   const [enhancePrompt, setEnhancePrompt] = useState(true);
   const [useContext, setUseContext] = useState(true);
@@ -306,6 +303,18 @@ function ProjectWorkspace() {
 
   // Panel detail drawer state
   const [detailPanelId, setDetailPanelId] = useState<number | null>(null);
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (detailPanelId != null) {
+      const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = `${scrollBarWidth}px`;
+      return () => {
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      };
+    }
+  }, [detailPanelId]);
   // Insert-at-position state for adding panels between existing ones
   const [insertAtPosition, setInsertAtPosition] = useState<number | null>(null);
 
@@ -1194,7 +1203,7 @@ function ProjectWorkspace() {
             </div>
 
             {/* ── Sidebar: Chapters ───────────────── */}
-            <div className={styles.sidebarSection}>
+            <div id="chapters-sidebar" className={styles.sidebarSection}>
               <div className={styles.sidebarTitle}>
                 <span>Chapters</span>
               </div>
@@ -1231,69 +1240,35 @@ function ProjectWorkspace() {
                           />
                         ) : (
                           <>
-                            <p className={styles.chapterItemName}>{chapter.name}</p>
-                            <div className="flex items-center gap-1">
-                              <p className={styles.chapterItemCount}>
-                                {panelCount} {panelCount === 1 ? 'panel' : 'panels'}
-                              </p>
-                              <Badge
-                                size="xs"
-                                variant="light"
-                                color={
+                            <p className={styles.chapterItemName}>
+                              {chapter.name}
+                            </p>
+                            <p className={styles.chapterItemCount}>
+                              <Tooltip
+                                label={
                                   chapter.status === ComicChapterStatus.Published
-                                    ? 'green'
-                                    : 'gray'
+                                    ? 'Published'
+                                    : 'Draft'
                                 }
+                                withArrow
+                                position="right"
                               >
-                                {chapter.status === ComicChapterStatus.Published
-                                  ? 'Published'
-                                  : 'Draft'}
-                              </Badge>
-                            </div>
+                                <span
+                                  className="inline-block w-1.5 h-1.5 rounded-full mr-1"
+                                  style={{
+                                    background:
+                                      chapter.status === ComicChapterStatus.Published
+                                        ? 'var(--mantine-color-green-5)'
+                                        : 'var(--mantine-color-gray-5)',
+                                  }}
+                                />
+                              </Tooltip>
+                              {panelCount} {panelCount === 1 ? 'panel' : 'panels'}
+                            </p>
                           </>
                         )}
                       </div>
                       <span className={styles.chapterItemActions}>
-                        <Tooltip
-                          label={
-                            chapter.status === ComicChapterStatus.Published
-                              ? 'Unpublish'
-                              : panelCount === 0
-                                ? 'Add panels before publishing'
-                                : 'Publish'
-                          }
-                        >
-                          <ActionIcon
-                            variant="transparent"
-                            size="xs"
-                            color={
-                              chapter.status === ComicChapterStatus.Published
-                                ? 'green'
-                                : 'dimmed'
-                            }
-                            disabled={
-                              chapter.status !== ComicChapterStatus.Published && panelCount === 0
-                            }
-                            loading={
-                              (publishChapterMutation.isLoading &&
-                                publishChapterMutation.variables?.chapterPosition ===
-                                  chapter.position) ||
-                              (unpublishChapterMutation.isLoading &&
-                                unpublishChapterMutation.variables?.chapterPosition ===
-                                  chapter.position)
-                            }
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              handleTogglePublish(chapter.position, chapter.status);
-                            }}
-                          >
-                            {chapter.status === ComicChapterStatus.Published ? (
-                              <IconWorld size={12} />
-                            ) : (
-                              <IconEyeOff size={12} />
-                            )}
-                          </ActionIcon>
-                        </Tooltip>
                         <ActionIcon
                           variant="transparent"
                           size="xs"
@@ -1453,10 +1428,6 @@ function ProjectWorkspace() {
                               .filter(Boolean) as string[]
                           }
                           onDelete={() => deletePanelMutation.mutate({ panelId: panel.id })}
-                          onViewDebug={() => {
-                            setDebugPanelId(panel.id);
-                            openDebugModal();
-                          }}
                           onRegenerate={() => {
                             const meta = panel.metadata as Record<string, any> | null;
                             setRegeneratingPanelId(panel.id);
@@ -1502,231 +1473,254 @@ function ProjectWorkspace() {
         </Stack>
       </Container>
 
-      {/* ── Panel Detail Drawer ──────────────────── */}
-      <div
-        className={clsx(styles.drawerBackdrop, detailPanel && styles.active)}
-        onClick={() => setDetailPanelId(null)}
-      />
-      <div className={clsx(styles.drawer, detailPanel && styles.active)}>
-        {detailPanel && (
+      {/* ── Mobile: floating chapter nav button ──── */}
+      <ActionIcon
+        className={styles.mobileChapterBtn}
+        variant="filled"
+        color="dark"
+        size="xl"
+        radius="xl"
+        onClick={() =>
+          document.getElementById('chapters-sidebar')?.scrollIntoView({ behavior: 'smooth' })
+        }
+      >
+        <IconBook size={18} />
+      </ActionIcon>
+
+      {/* ── Panel Detail Drawer (portaled to body to escape will-change: transform ancestor) ── */}
+      {typeof document !== 'undefined' &&
+        createPortal(
           <>
-            <div className={styles.drawerHeader}>
-              <Title order={4} style={{ fontWeight: 700 }}>
-                Panel #{detailPanelIndex >= 0 ? detailPanelIndex + 1 : '?'}
-              </Title>
-              <ActionIcon variant="subtle" c="dimmed" onClick={() => setDetailPanelId(null)}>
-                <IconX size={20} />
-              </ActionIcon>
-            </div>
-
-            <div className={styles.drawerContent}>
-              {/* Image */}
-              <div className={styles.drawerImageContainer}>
-                {detailPanel.imageUrl ? (
-                  <img src={getEdgeUrl(detailPanel.imageUrl, { width: 800 })} alt="Panel" />
-                ) : (
-                  <div
-                    className="w-full flex items-center justify-center"
-                    style={{ background: '#2C2E33', aspectRatio: '3/4' }}
-                  >
-                    {detailPanel.status === 'Generating' || detailPanel.status === 'Pending' ? (
-                      <div className={styles.spinner} />
-                    ) : (
-                      <IconAlertTriangle size={32} style={{ color: '#fa5252' }} />
-                    )}
+            <div
+              className={clsx(styles.drawerBackdrop, detailPanel && styles.active)}
+              onClick={() => setDetailPanelId(null)}
+              onTouchMove={(e) => e.preventDefault()}
+            />
+            <div className={clsx(styles.drawer, detailPanel && styles.active)}>
+              {detailPanel && (
+                <>
+                  <div className={styles.drawerHeader}>
+                    <Title order={4} style={{ fontWeight: 700 }}>
+                      Panel #{detailPanelIndex >= 0 ? detailPanelIndex + 1 : '?'}
+                    </Title>
+                    <ActionIcon variant="subtle" c="dimmed" onClick={() => setDetailPanelId(null)}>
+                      <IconX size={20} />
+                    </ActionIcon>
                   </div>
-                )}
-              </div>
 
-              {/* Status + Reference row */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className={styles.detailStatusBadge}>
-                  <span
-                    className={clsx(styles.detailStatusDot, {
-                      [styles.ready]: detailPanel.status === 'Ready',
-                      [styles.generating]:
-                        detailPanel.status === 'Generating' || detailPanel.status === 'Pending',
-                      [styles.failed]: detailPanel.status === 'Failed',
-                    })}
-                  />
-                  {detailPanel.status === 'Pending' ? 'Queued' : detailPanel.status}
-                </div>
-                {(detailPanel.references ?? []).map((r: { referenceId: number }) => {
-                  const name = referenceNameMap.get(r.referenceId);
-                  return name ? (
-                    <span key={r.referenceId} className={styles.detailCharacterPill}>
-                      <IconUser size={14} />
-                      {name}
-                    </span>
-                  ) : null;
-                })}
-                <div className="flex-1" />
-                <Text size="xs" c="dimmed">
-                  {new Date(detailPanel.createdAt).toLocaleDateString()}
-                </Text>
-              </div>
-
-              {/* Original prompt */}
-              <div>
-                <div className={styles.detailSectionTitle}>Original Prompt</div>
-                <div className={styles.promptBox}>{detailPanel.prompt}</div>
-              </div>
-
-              {/* Enhanced prompt */}
-              {detailPanel.enhancedPrompt && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={styles.detailSectionTitle} style={{ marginBottom: 0 }}>
-                      Enhanced Prompt
-                    </span>
-                    <span className={styles.enhancedBadge}>
-                      <IconSparkles size={12} />
-                      Enhanced
-                    </span>
-                  </div>
-                  <div className={clsx(styles.promptBox, styles.promptBoxEnhanced)}>
-                    {detailPanel.enhancedPrompt}
-                  </div>
-                </div>
-              )}
-
-              {/* Error */}
-              {detailPanel.errorMessage && (
-                <div>
-                  <div className={styles.detailSectionTitle}>Error</div>
-                  <div
-                    className={styles.promptBox}
-                    style={{ borderColor: '#fa5252', color: '#fa5252' }}
-                  >
-                    {detailPanel.errorMessage}
-                  </div>
-                </div>
-              )}
-
-              {/* Source Image (for enhanced panels) */}
-              {(detailPanel.metadata as Record<string, any> | null)?.sourceImageUrl && (
-                <div>
-                  <div className={styles.detailSectionTitle}>Source Image</div>
-                  <div className={styles.enhanceImagePreview}>
-                    <img
-                      src={
-                        getEdgeUrl((detailPanel.metadata as Record<string, any>).sourceImageUrl, {
-                          width: 400,
-                        }) ?? (detailPanel.metadata as Record<string, any>).sourceImageUrl
-                      }
-                      alt="Source"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Generation settings */}
-              {(() => {
-                const meta = detailPanel.metadata as Record<string, any> | null;
-                if (!meta) return null;
-                return (
-                  <div>
-                    <div className={styles.detailSectionTitle}>Settings</div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={styles.detailCharacterPill}>
-                        {meta.enhanceEnabled !== false ? 'Prompt enhanced' : 'Prompt not enhanced'}
-                      </span>
-                      {meta.enhanceEnabled !== false && (
-                        <span className={styles.detailCharacterPill}>
-                          {meta.useContext !== false
-                            ? 'Previous context used'
-                            : 'No previous context'}
-                        </span>
-                      )}
-                      {meta.includePreviousImage && (
-                        <span className={styles.detailCharacterPill}>
-                          Previous image referenced
-                        </span>
-                      )}
-                      {meta.sourceImageUrl && (
-                        <span className={styles.detailCharacterPill}>Enhanced from image</span>
+                  <div className={styles.drawerContent}>
+                    {/* Image */}
+                    <div className={styles.drawerImageContainer}>
+                      {detailPanel.imageUrl ? (
+                        <img src={getEdgeUrl(detailPanel.imageUrl, { width: 800 })} alt="Panel" />
+                      ) : (
+                        <div
+                          className="w-full flex items-center justify-center"
+                          style={{ background: '#2C2E33', aspectRatio: '3/4' }}
+                        >
+                          {detailPanel.status === 'Generating' ||
+                          detailPanel.status === 'Pending' ? (
+                            <div className={styles.spinner} />
+                          ) : (
+                            <IconAlertTriangle size={32} style={{ color: '#fa5252' }} />
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                );
-              })()}
 
-              {/* Actions */}
-              <div className={styles.detailActions}>
-                {(detailPanel.status === 'Ready' || detailPanel.status === 'Failed') && (
-                  <button
-                    className={styles.gradientBtn}
-                    onClick={() => {
+                    {/* Status + Reference row */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className={styles.detailStatusBadge}>
+                        <span
+                          className={clsx(styles.detailStatusDot, {
+                            [styles.ready]: detailPanel.status === 'Ready',
+                            [styles.generating]:
+                              detailPanel.status === 'Generating' ||
+                              detailPanel.status === 'Pending',
+                            [styles.failed]: detailPanel.status === 'Failed',
+                          })}
+                        />
+                        {detailPanel.status === 'Pending' ? 'Queued' : detailPanel.status}
+                      </div>
+                      {(detailPanel.references ?? []).map((r: { referenceId: number }) => {
+                        const name = referenceNameMap.get(r.referenceId);
+                        return name ? (
+                          <span key={r.referenceId} className={styles.detailCharacterPill}>
+                            <IconUser size={14} />
+                            {name}
+                          </span>
+                        ) : null;
+                      })}
+                      <div className="flex-1" />
+                      <Text size="xs" c="dimmed">
+                        {new Date(detailPanel.createdAt).toLocaleDateString()}
+                      </Text>
+                    </div>
+
+                    {/* Original prompt */}
+                    <div>
+                      <div className={styles.detailSectionTitle}>Original Prompt</div>
+                      <div className={styles.promptBox}>{detailPanel.prompt}</div>
+                    </div>
+
+                    {/* Enhanced prompt */}
+                    {detailPanel.enhancedPrompt && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={styles.detailSectionTitle} style={{ marginBottom: 0 }}>
+                            Enhanced Prompt
+                          </span>
+                          <span className={styles.enhancedBadge}>
+                            <IconSparkles size={12} />
+                            Enhanced
+                          </span>
+                        </div>
+                        <div className={clsx(styles.promptBox, styles.promptBoxEnhanced)}>
+                          {detailPanel.enhancedPrompt}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Error */}
+                    {detailPanel.errorMessage && (
+                      <div>
+                        <div className={styles.detailSectionTitle}>Error</div>
+                        <div
+                          className={styles.promptBox}
+                          style={{ borderColor: '#fa5252', color: '#fa5252' }}
+                        >
+                          {detailPanel.errorMessage}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Source Image (for enhanced panels) */}
+                    {(detailPanel.metadata as Record<string, any> | null)?.sourceImageUrl && (
+                      <div>
+                        <div className={styles.detailSectionTitle}>Source Image</div>
+                        <div className={styles.enhanceImagePreview}>
+                          <img
+                            src={
+                              getEdgeUrl(
+                                (detailPanel.metadata as Record<string, any>).sourceImageUrl,
+                                {
+                                  width: 400,
+                                }
+                              ) ?? (detailPanel.metadata as Record<string, any>).sourceImageUrl
+                            }
+                            alt="Source"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Generation settings */}
+                    {(() => {
                       const meta = detailPanel.metadata as Record<string, any> | null;
-                      setDetailPanelId(null);
-                      setRegeneratingPanelId(detailPanel.id);
-                      setPrompt(detailPanel.prompt);
-                      setEnhancePrompt(meta?.enhanceEnabled ?? true);
-                      setUseContext(meta?.useContext ?? true);
-                      setIncludePreviousImage(meta?.includePreviousImage ?? false);
-                      if (meta?.sourceImageUrl) {
-                        setPanelMode('enhance');
-                        setEnhanceSourceImage({
-                          url: meta.sourceImageUrl,
-                          previewUrl:
-                            getEdgeUrl(meta.sourceImageUrl, { width: 400 }) ?? meta.sourceImageUrl,
-                          width: meta.sourceImageWidth ?? 512,
-                          height: meta.sourceImageHeight ?? 512,
-                        });
-                      } else {
-                        setPanelMode('generate');
-                      }
-                      openPanelModal();
-                    }}
-                  >
-                    <IconRefreshDot size={16} />
-                    Regenerate
-                  </button>
-                )}
-                {detailPanelIndex >= 0 && (
-                  <button
-                    className={styles.subtleBtn}
-                    onClick={() => {
-                      setDetailPanelId(null);
-                      setInsertAtPosition(detailPanelIndex + 1);
-                      openPanelModal();
-                    }}
-                  >
-                    <IconPlus size={14} />
-                    Insert after
-                  </button>
-                )}
-                <button
-                  className={styles.subtleBtn}
-                  onClick={() => {
-                    setDetailPanelId(null);
-                    setDebugPanelId(detailPanel.id);
-                    openDebugModal();
-                  }}
-                >
-                  <IconBug size={14} />
-                  Debug Info
-                </button>
-                <button
-                  className={styles.dangerBtn}
-                  onClick={() => {
-                    openConfirmModal({
-                      title: 'Delete Panel',
-                      children: <Text size="sm">Are you sure you want to delete this panel?</Text>,
-                      labels: { confirm: 'Delete', cancel: 'Cancel' },
-                      confirmProps: { color: 'red' },
-                      onConfirm: () => deletePanelMutation.mutate({ panelId: detailPanel.id }),
-                    });
-                  }}
-                >
-                  <IconTrash size={14} />
-                  Delete
-                </button>
-              </div>
+                      if (!meta) return null;
+                      return (
+                        <div>
+                          <div className={styles.detailSectionTitle}>Settings</div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={styles.detailCharacterPill}>
+                              {meta.enhanceEnabled !== false
+                                ? 'Prompt enhanced'
+                                : 'Prompt not enhanced'}
+                            </span>
+                            {meta.enhanceEnabled !== false && (
+                              <span className={styles.detailCharacterPill}>
+                                {meta.useContext !== false
+                                  ? 'Previous context used'
+                                  : 'No previous context'}
+                              </span>
+                            )}
+                            {meta.includePreviousImage && (
+                              <span className={styles.detailCharacterPill}>
+                                Previous image referenced
+                              </span>
+                            )}
+                            {meta.sourceImageUrl && (
+                              <span className={styles.detailCharacterPill}>
+                                Enhanced from image
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Actions */}
+                    <div className={styles.detailActions}>
+                      {(detailPanel.status === 'Ready' || detailPanel.status === 'Failed') && (
+                        <button
+                          className={styles.gradientBtn}
+                          onClick={() => {
+                            const meta = detailPanel.metadata as Record<string, any> | null;
+                            setDetailPanelId(null);
+                            setRegeneratingPanelId(detailPanel.id);
+                            setPrompt(detailPanel.prompt);
+                            setEnhancePrompt(meta?.enhanceEnabled ?? true);
+                            setUseContext(meta?.useContext ?? true);
+                            setIncludePreviousImage(meta?.includePreviousImage ?? false);
+                            if (meta?.sourceImageUrl) {
+                              setPanelMode('enhance');
+                              setEnhanceSourceImage({
+                                url: meta.sourceImageUrl,
+                                previewUrl:
+                                  getEdgeUrl(meta.sourceImageUrl, { width: 400 }) ??
+                                  meta.sourceImageUrl,
+                                width: meta.sourceImageWidth ?? 512,
+                                height: meta.sourceImageHeight ?? 512,
+                              });
+                            } else {
+                              setPanelMode('generate');
+                            }
+                            openPanelModal();
+                          }}
+                        >
+                          <IconRefreshDot size={16} />
+                          Regenerate
+                        </button>
+                      )}
+                      {detailPanelIndex >= 0 && (
+                        <button
+                          className={styles.subtleBtn}
+                          onClick={() => {
+                            setDetailPanelId(null);
+                            setInsertAtPosition(detailPanelIndex + 1);
+                            openPanelModal();
+                          }}
+                        >
+                          <IconPlus size={14} />
+                          Insert after
+                        </button>
+                      )}
+                      <button
+                        className={styles.dangerBtn}
+                        onClick={() => {
+                          openConfirmModal({
+                            title: 'Delete Panel',
+                            children: (
+                              <Text size="sm">Are you sure you want to delete this panel?</Text>
+                            ),
+                            labels: { confirm: 'Delete', cancel: 'Cancel' },
+                            confirmProps: { color: 'red' },
+                            onConfirm: () =>
+                              deletePanelMutation.mutate({ panelId: detailPanel.id }),
+                          });
+                        }}
+                      >
+                        <IconTrash size={14} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-          </>
+          </>,
+          document.body
         )}
-      </div>
 
       {/* ── Generate / Enhance Panel Modal ─────────────────── */}
       <Modal
@@ -2433,8 +2427,6 @@ function ProjectWorkspace() {
         </Stack>
       </Modal>
 
-      {/* ── Debug Modal ──────────────────────────── */}
-      <PanelDebugModal panelId={debugPanelId} opened={debugModalOpened} onClose={closeDebugModal} />
     </>
   );
 }

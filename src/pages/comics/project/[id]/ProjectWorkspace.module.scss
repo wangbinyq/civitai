@@ -318,6 +318,23 @@
   max-height: calc(100vh - 100px);
   overflow-y: auto;
   scrollbar-width: thin;
+
+  @media (max-width: 860px) {
+    position: static;
+    max-height: none;
+  }
+}
+
+.mobileChapterBtn {
+  display: none;
+
+  @media (max-width: 860px) {
+    display: flex;
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    z-index: 100;
+  }
 }
 
 .sidebarTitle {
@@ -393,6 +410,10 @@
   z-index: 3;
 
   .panelCard:hover & {
+    opacity: 1;
+  }
+
+  @media (max-width: 860px) {
     opacity: 1;
   }
 }
@@ -478,6 +499,8 @@
   &.active {
     opacity: 1;
     pointer-events: auto;
+    touch-action: none;
+    overflow: hidden;
   }
 }
 
@@ -495,11 +518,17 @@
   transform: translateX(100%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
 
   &.active {
     transform: translateX(0);
+  }
+
+  @media (max-width: 640px) {
+    max-width: 100%;
+    border-left: none;
   }
 }
 
