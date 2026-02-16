@@ -760,6 +760,12 @@ const baseModelGenerationConfig: BaseModelGenerationConfig[] = [
         baseModels: ['Flux.2 Klein 9B'],
       },
     ],
+    partialSupport: [
+      {
+        modelTypes: [ModelType.LORA],
+        baseModels: ['Flux.2 Klein 9B-base'],
+      },
+    ],
   },
   {
     group: 'Flux2Klein_9B_base',
@@ -776,6 +782,12 @@ const baseModelGenerationConfig: BaseModelGenerationConfig[] = [
       {
         modelTypes: [ModelType.Checkpoint, ModelType.LORA],
         baseModels: ['Flux.2 Klein 4B'],
+      },
+    ],
+    partialSupport: [
+      {
+        modelTypes: [ModelType.LORA],
+        baseModels: ['Flux.2 Klein 4B-base'],
       },
     ],
   },
@@ -927,6 +939,14 @@ const baseModelGenerationConfig: BaseModelGenerationConfig[] = [
         baseModels: ['Wan Video 2.5 I2V'],
       },
     ],
+  },
+  {
+    group: 'Seedance15',
+    support: [{ modelTypes: [ModelType.Checkpoint], baseModels: ['Seedance 1.5'] }],
+  },
+  {
+    group: 'Seedance2',
+    support: [{ modelTypes: [ModelType.Checkpoint], baseModels: ['Seedance 2.0'] }],
   },
   {
     group: 'Veo3',

@@ -524,6 +524,7 @@ function formatWorkflowStep(args: {
     case 'comfy':
       return formatComfyStep(args);
     case 'imageGen':
+    case 'imageUpscaler':
       return formatImageGenStep(args);
     case 'videoGen':
     case 'videoUpscaler':
