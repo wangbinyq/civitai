@@ -1,4 +1,4 @@
-import { ActionIcon, Container, CopyButton, Select, Tooltip } from '@mantine/core';
+import { ActionIcon, Badge, Container, CopyButton, Select, Tooltip } from '@mantine/core';
 import {
   IconArrowLeft,
   IconBell,
@@ -31,7 +31,7 @@ import { getEdgeUrl } from '~/client-utils/cf-images-utils';
 import { ReportEntity } from '~/server/schema/report.schema';
 import { Flags } from '~/shared/utils/flags';
 import { getBrowsingLevelLabel } from '~/shared/constants/browsingLevel.constants';
-import { ComicEngagementType } from '~/shared/utils/prisma/enums';
+import { ComicChapterStatus, ComicEngagementType } from '~/shared/utils/prisma/enums';
 import { formatRelativeDate } from '~/utils/comic-helpers';
 import { slugit } from '~/utils/string-helpers';
 import type { RouterOutput } from '~/types/router';
@@ -364,6 +364,11 @@ function ComicOverview({ project }: { project: Project }) {
                           <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1.5" />
                         )}
                         {ch.name}
+                        {ch.status === ComicChapterStatus.Draft && (
+                          <Badge size="xs" variant="light" color="yellow" ml={4}>
+                            Draft
+                          </Badge>
+                        )}
                         {isNsfw && (
                           <button
                             className={styles.chapterRatingPill}
@@ -414,7 +419,10 @@ function ChapterReader({ project, chapterDbPos }: { project: Project; chapterDbP
     () =>
       chapters.map((ch, i) => ({
         value: String(i),
-        label: `Ch. ${ch.position + 1}: ${ch.name}`,
+        label:
+          ch.status === ComicChapterStatus.Draft
+            ? `Ch. ${ch.position + 1}: ${ch.name} (Draft)`
+            : `Ch. ${ch.position + 1}: ${ch.name}`,
       })),
     [chapters]
   );

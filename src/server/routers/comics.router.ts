@@ -569,7 +569,7 @@ export const comicsRouter = router({
       },
     });
 
-    if (!project || project.userId !== ctx.user.id) {
+    if (!project || (project.userId !== ctx.user.id && !ctx.user.isModerator)) {
       throw throwAuthorizationError();
     }
 
@@ -766,13 +766,16 @@ export const comicsRouter = router({
 
   getPublicProjectForReader: comicPublicProcedure
     .input(z.object({ id: z.number().int() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const isOwnerOrMod = ctx.user != null;
+
       const project = await dbRead.comicProject.findUnique({
         where: { id: input.id },
         select: {
           id: true,
           name: true,
           description: true,
+          userId: true,
           coverImage: { select: { id: true, url: true, nsfwLevel: true } },
           heroImage: { select: { id: true, url: true, nsfwLevel: true } },
           heroImagePosition: true,
@@ -783,12 +786,16 @@ export const comicsRouter = router({
             select: userWithCosmeticsSelect,
           },
           chapters: {
-            where: { status: ComicChapterStatus.Published },
+            // Owners and mods see all chapters; public sees only published
+            ...(!isOwnerOrMod
+              ? { where: { status: ComicChapterStatus.Published } }
+              : {}),
             orderBy: { position: 'asc' },
             select: {
               projectId: true,
               position: true,
               name: true,
+              status: true,
               nsfwLevel: true,
               publishedAt: true,
               panels: {
@@ -816,10 +823,20 @@ export const comicsRouter = router({
         throw throwNotFoundError('Comic not found');
       }
 
-      // Filter out chapters with no ready panels
-      const chapters = project.chapters.filter((ch) => ch.panels.length > 0);
+      // Check if viewer is the owner or a moderator
+      const canViewDrafts =
+        ctx.user != null &&
+        (project.userId === ctx.user.id || ctx.user.isModerator === true);
 
-      if (chapters.length === 0) {
+      // Filter out draft chapters for non-owner, non-mod viewers
+      // Also filter out chapters with no ready panels
+      const chapters = project.chapters.filter((ch) => {
+        if (ch.panels.length === 0) return false;
+        if (ch.status !== ComicChapterStatus.Published && !canViewDrafts) return false;
+        return true;
+      });
+
+      if (chapters.length === 0 && !canViewDrafts) {
         throw throwNotFoundError('Comic not found');
       }
 
@@ -832,6 +849,7 @@ export const comicsRouter = router({
         heroImage: project.heroImage,
         heroImagePosition: project.heroImagePosition,
         user: project.user,
+        isOwnerOrMod: canViewDrafts,
         chapters,
       };
     }),

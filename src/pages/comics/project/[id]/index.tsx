@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Badge,
   Button,
   Container,
   Group,
@@ -16,6 +17,7 @@ import {
   Textarea,
   TextInput,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { Dropzone, IMAGE_MIME_TYPE } from '@mantine/dropzone';
 import { useDisclosure } from '@mantine/hooks';
@@ -25,6 +27,7 @@ import {
   IconArrowLeft,
   IconBook,
   IconBug,
+  IconEyeOff,
   IconGripVertical,
   IconPencil,
   IconPhoto,
@@ -37,6 +40,7 @@ import {
   IconUpload,
   IconUser,
   IconWand,
+  IconWorld,
   IconX,
 } from '@tabler/icons-react';
 import clsx from 'clsx';
@@ -64,7 +68,7 @@ import { useCFImageUpload } from '~/hooks/useCFImageUpload';
 import { createServerSideProps } from '~/server/utils/server-side-helpers';
 import { showErrorNotification } from '~/utils/notifications';
 import { formatGenreLabel } from '~/utils/comic-helpers';
-import { ComicGenre } from '~/shared/utils/prisma/enums';
+import { ComicChapterStatus, ComicGenre } from '~/shared/utils/prisma/enums';
 import { trpc } from '~/utils/trpc';
 import styles from './ProjectWorkspace.module.scss';
 
@@ -437,6 +441,16 @@ function ProjectWorkspace() {
     onError: handleMutationError,
   });
 
+  const publishChapterMutation = trpc.comics.publishChapter.useMutation({
+    onSuccess: () => refetch(),
+    onError: handleMutationError,
+  });
+
+  const unpublishChapterMutation = trpc.comics.unpublishChapter.useMutation({
+    onSuccess: () => refetch(),
+    onError: handleMutationError,
+  });
+
   const planPanelsMutation = trpc.comics.planChapterPanels.useMutation({
     onSuccess: (data) => {
       setSmartPanels(data.panels);
@@ -618,6 +632,12 @@ function ProjectWorkspace() {
     if (!prompt.trim() || !activeChapter || isSubmitting) return;
     setIsSubmitting(true);
     try {
+      // When regenerating, preserve the old panel's position
+      let targetPosition = insertAtPosition;
+      if (regeneratingPanelId && targetPosition == null) {
+        const oldPanel = activeChapter.panels.find((p) => p.id === regeneratingPanelId);
+        if (oldPanel) targetPosition = oldPanel.position;
+      }
       if (regeneratingPanelId) {
         await deletePanelMutation.mutateAsync({ panelId: regeneratingPanelId });
       }
@@ -629,7 +649,7 @@ function ProjectWorkspace() {
         useContext,
         includePreviousImage,
         aspectRatio,
-        ...(insertAtPosition != null ? { position: insertAtPosition } : {}),
+        ...(targetPosition != null ? { position: targetPosition } : {}),
       });
     } finally {
       setIsSubmitting(false);
@@ -640,6 +660,12 @@ function ProjectWorkspace() {
     if (!activeChapter || !enhanceSourceImage || isSubmitting) return;
     setIsSubmitting(true);
     try {
+      // When regenerating, preserve the old panel's position
+      let targetPosition = insertAtPosition;
+      if (regeneratingPanelId && targetPosition == null) {
+        const oldPanel = activeChapter.panels.find((p) => p.id === regeneratingPanelId);
+        if (oldPanel) targetPosition = oldPanel.position;
+      }
       if (regeneratingPanelId) {
         await deletePanelMutation.mutateAsync({ panelId: regeneratingPanelId });
       }
@@ -654,7 +680,7 @@ function ProjectWorkspace() {
         useContext,
         includePreviousImage,
         aspectRatio,
-        ...(insertAtPosition != null ? { position: insertAtPosition } : {}),
+        ...(targetPosition != null ? { position: targetPosition } : {}),
       });
     } finally {
       setIsSubmitting(false);
@@ -936,6 +962,26 @@ function ProjectWorkspace() {
     });
   };
 
+  const handleTogglePublish = (chapterPosition: number, currentStatus: string) => {
+    if (currentStatus === ComicChapterStatus.Published) {
+      openConfirmModal({
+        title: 'Unpublish Chapter',
+        children: (
+          <Text size="sm">
+            This chapter will be reverted to draft and will no longer be visible to readers.
+          </Text>
+        ),
+        labels: { confirm: 'Unpublish', cancel: 'Cancel' },
+        confirmProps: { color: 'yellow' },
+        onConfirm: () => {
+          unpublishChapterMutation.mutate({ projectId, chapterPosition });
+        },
+      });
+    } else {
+      publishChapterMutation.mutate({ projectId, chapterPosition });
+    }
+  };
+
   const handleDeleteReference = (referenceId: number, referenceName: string) => {
     openConfirmModal({
       title: 'Delete Reference',
@@ -1186,13 +1232,68 @@ function ProjectWorkspace() {
                         ) : (
                           <>
                             <p className={styles.chapterItemName}>{chapter.name}</p>
-                            <p className={styles.chapterItemCount}>
-                              {panelCount} {panelCount === 1 ? 'panel' : 'panels'}
-                            </p>
+                            <div className="flex items-center gap-1">
+                              <p className={styles.chapterItemCount}>
+                                {panelCount} {panelCount === 1 ? 'panel' : 'panels'}
+                              </p>
+                              <Badge
+                                size="xs"
+                                variant="light"
+                                color={
+                                  chapter.status === ComicChapterStatus.Published
+                                    ? 'green'
+                                    : 'gray'
+                                }
+                              >
+                                {chapter.status === ComicChapterStatus.Published
+                                  ? 'Published'
+                                  : 'Draft'}
+                              </Badge>
+                            </div>
                           </>
                         )}
                       </div>
                       <span className={styles.chapterItemActions}>
+                        <Tooltip
+                          label={
+                            chapter.status === ComicChapterStatus.Published
+                              ? 'Unpublish'
+                              : panelCount === 0
+                                ? 'Add panels before publishing'
+                                : 'Publish'
+                          }
+                        >
+                          <ActionIcon
+                            variant="transparent"
+                            size="xs"
+                            color={
+                              chapter.status === ComicChapterStatus.Published
+                                ? 'green'
+                                : 'dimmed'
+                            }
+                            disabled={
+                              chapter.status !== ComicChapterStatus.Published && panelCount === 0
+                            }
+                            loading={
+                              (publishChapterMutation.isLoading &&
+                                publishChapterMutation.variables?.chapterPosition ===
+                                  chapter.position) ||
+                              (unpublishChapterMutation.isLoading &&
+                                unpublishChapterMutation.variables?.chapterPosition ===
+                                  chapter.position)
+                            }
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              handleTogglePublish(chapter.position, chapter.status);
+                            }}
+                          >
+                            {chapter.status === ComicChapterStatus.Published ? (
+                              <IconWorld size={12} />
+                            ) : (
+                              <IconEyeOff size={12} />
+                            )}
+                          </ActionIcon>
+                        </Tooltip>
                         <ActionIcon
                           variant="transparent"
                           size="xs"
@@ -1249,11 +1350,69 @@ function ProjectWorkspace() {
 
             {/* ── Main: Panels ───────────────────── */}
             <div>
-              {/* Active chapter title */}
+              {/* Active chapter title + publish toggle */}
               {activeChapter && (
-                <Title order={4} mb="md" style={{ fontWeight: 700 }}>
-                  {activeChapter.name}
-                </Title>
+                <Group justify="space-between" align="center" mb="md">
+                  <Group gap="sm">
+                    <Title order={4} style={{ fontWeight: 700 }}>
+                      {activeChapter.name}
+                    </Title>
+                    <Badge
+                      size="sm"
+                      variant="light"
+                      color={
+                        activeChapter.status === ComicChapterStatus.Published ? 'green' : 'gray'
+                      }
+                    >
+                      {activeChapter.status === ComicChapterStatus.Published
+                        ? 'Published'
+                        : 'Draft'}
+                    </Badge>
+                  </Group>
+                  <Tooltip
+                    label="Add panels before publishing"
+                    disabled={
+                      activeChapter.status === ComicChapterStatus.Published ||
+                      activeChapter.panels.length > 0
+                    }
+                  >
+                    <Button
+                      size="xs"
+                      variant={
+                        activeChapter.status === ComicChapterStatus.Published ? 'light' : 'filled'
+                      }
+                      color={
+                        activeChapter.status === ComicChapterStatus.Published ? 'yellow' : 'green'
+                      }
+                      leftSection={
+                        activeChapter.status === ComicChapterStatus.Published ? (
+                          <IconEyeOff size={14} />
+                        ) : (
+                          <IconWorld size={14} />
+                        )
+                      }
+                      disabled={
+                        activeChapter.status !== ComicChapterStatus.Published &&
+                        activeChapter.panels.length === 0
+                      }
+                      loading={
+                        (publishChapterMutation.isLoading &&
+                          publishChapterMutation.variables?.chapterPosition ===
+                            activeChapter.position) ||
+                        (unpublishChapterMutation.isLoading &&
+                          unpublishChapterMutation.variables?.chapterPosition ===
+                            activeChapter.position)
+                      }
+                      onClick={() =>
+                        handleTogglePublish(activeChapter.position, activeChapter.status)
+                      }
+                    >
+                      {activeChapter.status === ComicChapterStatus.Published
+                        ? 'Unpublish'
+                        : 'Publish'}
+                    </Button>
+                  </Tooltip>
+                </Group>
               )}
 
               {activeChapter && activeChapter.panels.length === 0 && (
