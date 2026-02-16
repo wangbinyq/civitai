@@ -2037,6 +2037,28 @@ export const comicsRouter = router({
         throw throwAuthorizationError();
       }
 
+      // Re-trigger ingestion for any panel images still pending scan, and recalculate nsfwLevels
+      const panelsWithImages = await dbRead.comicPanel.findMany({
+        where: {
+          projectId: input.projectId,
+          chapterPosition: input.chapterPosition,
+          imageId: { not: null },
+        },
+        select: {
+          imageId: true,
+          image: { select: { id: true, ingestion: true, nsfwLevel: true } },
+        },
+      });
+      for (const panel of panelsWithImages) {
+        if (panel.image && panel.image.ingestion === 'Pending') {
+          ingestImageById({ id: panel.image.id }).catch((e) =>
+            console.error(`Failed to re-ingest image ${panel.image!.id} during publish:`, e)
+          );
+        }
+      }
+      await updateComicChapterNsfwLevels([input.projectId]);
+      await updateComicProjectNsfwLevels([input.projectId]);
+
       const isFirstPublish = !chapter.publishedAt;
       const updated = await dbWrite.comicChapter.update({
         where: {
