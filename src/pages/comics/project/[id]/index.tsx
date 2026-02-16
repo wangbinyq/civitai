@@ -5,7 +5,10 @@ import {
   Group,
   Loader,
   Modal,
+  NativeSelect,
+  Paper,
   ScrollArea,
+  SegmentedControl,
   Select,
   Stack,
   Switch,
@@ -89,15 +92,57 @@ export const getServerSideProps = createServerSideProps({
   },
 });
 
+const COMIC_ASPECT_RATIOS = [
+  { label: '16:9', width: 2560, height: 1440 },
+  { label: '4:3', width: 2304, height: 1728 },
+  { label: '1:1', width: 2048, height: 2048 },
+  { label: '3:4', width: 1728, height: 2304 },
+  { label: '9:16', width: 1440, height: 2560 },
+];
+
+function AspectRatioSelector({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Text size="sm" fw={500}>
+        Aspect Ratio
+      </Text>
+      <SegmentedControl
+        value={value}
+        onChange={onChange}
+        data={COMIC_ASPECT_RATIOS.map(({ label, width, height }) => ({
+          label: (
+            <div className="flex flex-col items-center gap-1">
+              <Paper
+                withBorder
+                style={{ borderWidth: 2, aspectRatio: `${width}/${height}`, height: 20 }}
+              />
+              <Text size="xs">{label}</Text>
+            </div>
+          ),
+          value: label,
+        }))}
+      />
+    </div>
+  );
+}
+
 function SortableBulkItem({
   item,
   index,
   onUpdatePrompt,
+  onUpdateAspectRatio,
   onRemove,
 }: {
-  item: { id: string; sourceImage?: { preview: string }; prompt: string };
+  item: { id: string; sourceImage?: { preview: string }; prompt: string; aspectRatio: string };
   index: number;
   onUpdatePrompt: (id: string, prompt: string) => void;
+  onUpdateAspectRatio: (id: string, aspectRatio: string) => void;
   onRemove: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -155,14 +200,24 @@ function SortableBulkItem({
               : 'Upload only (free)'
             : 'Text-to-image (costs buzz)'}
         </Text>
-        <TextInput
-          size="xs"
-          placeholder={
-            item.sourceImage ? 'Optional prompt for enhancement...' : 'Describe the scene...'
-          }
-          value={item.prompt}
-          onChange={(e) => onUpdatePrompt(item.id, e.target.value)}
-        />
+        <div className="flex gap-2 items-end">
+          <TextInput
+            size="xs"
+            className="flex-1"
+            placeholder={
+              item.sourceImage ? 'Optional prompt for enhancement...' : 'Describe the scene...'
+            }
+            value={item.prompt}
+            onChange={(e) => onUpdatePrompt(item.id, e.target.value)}
+          />
+          <NativeSelect
+            size="xs"
+            value={item.aspectRatio}
+            onChange={(e) => onUpdateAspectRatio(item.id, e.target.value)}
+            data={COMIC_ASPECT_RATIOS.map((r) => r.label)}
+            style={{ width: 72, flexShrink: 0 }}
+          />
+        </div>
       </div>
 
       {/* Remove button */}
@@ -192,6 +247,7 @@ function ProjectWorkspace() {
   const [enhancePrompt, setEnhancePrompt] = useState(true);
   const [useContext, setUseContext] = useState(true);
   const [includePreviousImage, setIncludePreviousImage] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState('3:4');
   const [activeChapterPosition, setActiveChapterPosition] = useState<number | null>(null);
   const [regeneratingPanelId, setRegeneratingPanelId] = useState<number | null>(null);
 
@@ -216,6 +272,7 @@ function ProjectWorkspace() {
     id: string;
     sourceImage?: { url: string; cfId: string; width: number; height: number; preview: string };
     prompt: string;
+    aspectRatio: string;
   };
   const [bulkItems, setBulkItems] = useState<BulkPanelItem[]>([]);
   const [bulkEnhance, setBulkEnhance] = useState(true);
@@ -255,6 +312,7 @@ function ProjectWorkspace() {
   const [smartStory, setSmartStory] = useState('');
   const [smartPanels, setSmartPanels] = useState<{ prompt: string }[]>([]);
   const [smartEnhance, setSmartEnhance] = useState(true);
+  const [smartAspectRatio, setSmartAspectRatio] = useState('3:4');
 
   const panelSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -549,6 +607,7 @@ function ProjectWorkspace() {
     setPrompt('');
     setUseContext(true);
     setIncludePreviousImage(false);
+    setAspectRatio('3:4');
     resetEnhanceFiles();
     setBulkItems([]);
     setBulkEnhance(true);
@@ -569,6 +628,7 @@ function ProjectWorkspace() {
         enhance: enhancePrompt,
         useContext,
         includePreviousImage,
+        aspectRatio,
         ...(insertAtPosition != null ? { position: insertAtPosition } : {}),
       });
     } finally {
@@ -593,6 +653,7 @@ function ProjectWorkspace() {
         enhance: enhancePrompt,
         useContext,
         includePreviousImage,
+        aspectRatio,
         ...(insertAtPosition != null ? { position: insertAtPosition } : {}),
       });
     } finally {
@@ -710,6 +771,7 @@ function ProjectWorkspace() {
             preview: getEdgeUrl(result.id, { width: 120 }) ?? result.id,
           },
           prompt: '',
+          aspectRatio: '3:4',
         });
       }
       setBulkItems((prev) => [...prev, ...newItems].slice(0, 20));
@@ -725,6 +787,7 @@ function ProjectWorkspace() {
         {
           id: `bulk-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           prompt: '',
+          aspectRatio: '3:4',
         },
       ].slice(0, 20)
     );
@@ -762,6 +825,7 @@ function ProjectWorkspace() {
                     preview: getEdgeUrl(result.id, { width: 120 }) ?? result.id,
                   },
                   prompt: '',
+                  aspectRatio: '3:4',
                 });
               } catch (err) {
                 console.error('Failed to upload generator image:', err);
@@ -775,6 +839,7 @@ function ProjectWorkspace() {
                     preview: img.url,
                   },
                   prompt: '',
+                  aspectRatio: '3:4',
                 });
               }
             }
@@ -794,6 +859,12 @@ function ProjectWorkspace() {
   const handleBulkUpdatePrompt = (itemId: string, newPrompt: string) => {
     setBulkItems((prev) =>
       prev.map((item) => (item.id === itemId ? { ...item, prompt: newPrompt } : item))
+    );
+  };
+
+  const handleBulkUpdateAspectRatio = (itemId: string, newAspectRatio: string) => {
+    setBulkItems((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, aspectRatio: newAspectRatio } : item))
     );
   };
 
@@ -821,6 +892,7 @@ function ProjectWorkspace() {
           sourceImageUrl: item.sourceImage?.url,
           sourceImageWidth: item.sourceImage?.width,
           sourceImageHeight: item.sourceImage?.height,
+          aspectRatio: item.aspectRatio,
         })),
       });
     } finally {
@@ -934,6 +1006,7 @@ function ProjectWorkspace() {
     setSmartStory('');
     setSmartPanels([]);
     setSmartEnhance(true);
+    setSmartAspectRatio('3:4');
   };
 
   const handlePlanPanels = () => {
@@ -949,6 +1022,7 @@ function ProjectWorkspace() {
       storyDescription: smartStory.trim(),
       panels: smartPanels.filter((p) => p.prompt.trim()),
       enhance: smartEnhance,
+      aspectRatio: smartAspectRatio,
     });
   };
 
@@ -1596,6 +1670,8 @@ function ProjectWorkspace() {
               </>
             )}
 
+            <AspectRatioSelector value={aspectRatio} onChange={setAspectRatio} />
+
             <Group justify="flex-end">
               <Button variant="default" onClick={handlePanelModalClose}>
                 Cancel
@@ -1736,6 +1812,7 @@ function ProjectWorkspace() {
                     onChange={(e) => setIncludePreviousImage(e.currentTarget.checked)}
                   />
                 )}
+                <AspectRatioSelector value={aspectRatio} onChange={setAspectRatio} />
               </>
             )}
 
@@ -1835,6 +1912,7 @@ function ProjectWorkspace() {
                           item={item}
                           index={idx}
                           onUpdatePrompt={handleBulkUpdatePrompt}
+                          onUpdateAspectRatio={handleBulkUpdateAspectRatio}
                           onRemove={handleBulkRemoveItem}
                         />
                       ))}
@@ -2010,6 +2088,8 @@ function ProjectWorkspace() {
               onChange={(e) => setSmartEnhance(e.currentTarget.checked)}
               color="yellow"
             />
+
+            <AspectRatioSelector value={smartAspectRatio} onChange={setSmartAspectRatio} />
 
             <Text size="sm" c="dimmed">
               Cost: {smartPanels.filter((p) => p.prompt.trim()).length} panels x{' '}

@@ -40,6 +40,7 @@ import { getEdgeUrl } from '~/client-utils/cf-images-utils';
 import { userWithCosmeticsSelect } from '~/server/selectors/user.selector';
 import { NotificationCategory, SearchIndexUpdateQueueAction } from '~/server/common/enums';
 import { comicsSearchIndex } from '~/server/search-index';
+import { nanoBananaProSizes } from '~/server/common/constants';
 
 // Feature flag gate — all procedures require the comicCreator flag
 const comicFlag = isFlagProtected('comicCreator');
@@ -47,9 +48,13 @@ const comicProtectedProcedure = protectedProcedure.use(comicFlag);
 const comicPublicProcedure = publicProcedure.use(comicFlag);
 
 // Constants
-const NANOBANANA_VERSION_ID = 2154472;
-const PANEL_WIDTH = 1728;
-const PANEL_HEIGHT = 2304;
+const NANOBANANA_VERSION_ID = 2436219;
+const DEFAULT_ASPECT_RATIO = '3:4';
+
+function getAspectRatioDimensions(aspectRatio: string) {
+  const match = nanoBananaProSizes.find((s) => s.label === aspectRatio);
+  return match ?? nanoBananaProSizes.find((s) => s.label === DEFAULT_ASPECT_RATIO)!;
+}
 
 // Middleware to check project ownership
 const isProjectOwner = middleware(async ({ ctx, next, input = {} }) => {
@@ -134,6 +139,7 @@ const createPanelSchema = z.object({
   useContext: z.boolean().default(true),
   includePreviousImage: z.boolean().default(false),
   position: z.number().int().min(0).optional(),
+  aspectRatio: z.string().default('3:4'),
 });
 
 const updatePanelSchema = z.object({
@@ -195,6 +201,7 @@ const smartCreateChapterSchema = z.object({
     .min(1)
     .max(20),
   enhance: z.boolean().default(true),
+  aspectRatio: z.string().default('3:4'),
 });
 
 const enhancePanelSchema = z.object({
@@ -208,6 +215,7 @@ const enhancePanelSchema = z.object({
   useContext: z.boolean().default(true),
   includePreviousImage: z.boolean().default(false),
   position: z.number().int().min(0).optional(),
+  aspectRatio: z.string().default('3:4'),
 });
 
 const bulkCreatePanelsSchema = z.object({
@@ -225,6 +233,7 @@ const bulkCreatePanelsSchema = z.object({
         sourceImageHeight: z.number().int().positive().optional(),
         // For import mode (existing image ID)
         imageId: z.number().int().optional(),
+        aspectRatio: z.string().default('3:4'),
       })
     )
     .min(1)
@@ -291,6 +300,9 @@ async function createSinglePanel(args: {
   refImages: { url: string; width: number; height: number }[];
   userId: number;
   ctx: any;
+  width: number;
+  height: number;
+  aspectRatio: string;
   storyContext?: {
     storyDescription: string;
     previousPanelPrompts: string[];
@@ -309,6 +321,9 @@ async function createSinglePanel(args: {
     refImages,
     userId,
     ctx,
+    width,
+    height,
+    aspectRatio,
     storyContext,
   } = args;
 
@@ -341,8 +356,8 @@ async function createSinglePanel(args: {
       engine: 'gemini',
       baseModel: 'NanoBanana',
       checkpointVersionId: NANOBANANA_VERSION_ID,
-      width: PANEL_WIDTH,
-      height: PANEL_HEIGHT,
+      width,
+      height,
       prompt: fullPrompt,
       negativePrompt: '',
     },
@@ -375,8 +390,9 @@ async function createSinglePanel(args: {
         negativePrompt: '',
         engine: 'gemini',
         baseModel: 'NanoBanana' as any,
-        width: PANEL_WIDTH,
-        height: PANEL_HEIGHT,
+        width,
+        height,
+        aspectRatio,
         workflow: 'txt2img',
         sampler: 'Euler',
         steps: 25,
@@ -825,14 +841,16 @@ export const comicsRouter = router({
     try {
       const token = await getOrchestratorToken(ctx.user.id, ctx);
 
+      const defaultDims = getAspectRatioDimensions(DEFAULT_ASPECT_RATIO);
       const step = await createImageGenStep({
         params: {
           prompt: '',
           negativePrompt: '',
           engine: 'gemini',
           baseModel: 'NanoBanana' as any,
-          width: PANEL_WIDTH,
-          height: PANEL_HEIGHT,
+          width: defaultDims.width,
+          height: defaultDims.height,
+          aspectRatio: DEFAULT_ASPECT_RATIO,
           workflow: 'txt2img',
           sampler: 'Euler',
           steps: 25,
@@ -1394,6 +1412,7 @@ export const comicsRouter = router({
 
       // Conditionally use previous panel context for prompt enhancement
       const effectiveContext = input.useContext ? contextPanel : null;
+      const { width: panelWidth, height: panelHeight } = getAspectRatioDimensions(input.aspectRatio);
 
       const token = await getOrchestratorToken(ctx.user!.id, ctx);
 
@@ -1415,7 +1434,7 @@ export const comicsRouter = router({
       const allImages = [...combinedRefImages];
       if (input.includePreviousImage && contextPanel?.imageUrl) {
         const prevEdgeUrl = getEdgeUrl(contextPanel.imageUrl, { original: true });
-        allImages.push({ url: prevEdgeUrl, width: PANEL_WIDTH, height: PANEL_HEIGHT });
+        allImages.push({ url: prevEdgeUrl, width: panelWidth, height: panelHeight });
       }
 
       // Build metadata for debugging
@@ -1435,8 +1454,8 @@ export const comicsRouter = router({
           engine: 'gemini',
           baseModel: 'NanoBanana',
           checkpointVersionId: NANOBANANA_VERSION_ID,
-          width: PANEL_WIDTH,
-          height: PANEL_HEIGHT,
+          width: panelWidth,
+          height: panelHeight,
           prompt: fullPrompt,
           negativePrompt: '',
         },
@@ -1471,8 +1490,9 @@ export const comicsRouter = router({
             negativePrompt: '',
             engine: 'gemini',
             baseModel: 'NanoBanana' as any,
-            width: PANEL_WIDTH,
-            height: PANEL_HEIGHT,
+            width: panelWidth,
+            height: panelHeight,
+            aspectRatio: input.aspectRatio,
             workflow: 'txt2img',
             sampler: 'Euler',
             steps: 25,
@@ -1712,7 +1732,9 @@ export const comicsRouter = router({
           engine: 'gemini',
           baseModel: 'NanoBanana',
           checkpointVersionId: NANOBANANA_VERSION_ID,
-          dimensions: { width: PANEL_WIDTH, height: PANEL_HEIGHT },
+          dimensions: (panel.metadata as any)?.generationParams
+            ? { width: (panel.metadata as any).generationParams.width, height: (panel.metadata as any).generationParams.height }
+            : { width: getAspectRatioDimensions(DEFAULT_ASPECT_RATIO).width, height: getAspectRatioDimensions(DEFAULT_ASPECT_RATIO).height },
         },
         workflow: workflowInfo,
       };
@@ -1769,13 +1791,18 @@ export const comicsRouter = router({
           firstStep?.output?.images?.[0]?.url ?? firstStep?.output?.blobs?.[0]?.url ?? null;
 
         if (imageUrl) {
+          // Extract dimensions from panel metadata (set during creation)
+          const genParams = (panel.metadata as any)?.generationParams;
+          const imgWidth = genParams?.width ?? getAspectRatioDimensions(DEFAULT_ASPECT_RATIO).width;
+          const imgHeight = genParams?.height ?? getAspectRatioDimensions(DEFAULT_ASPECT_RATIO).height;
+
           // Create Image record for content moderation pipeline
           const image = await dbWrite.image.create({
             data: {
               url: imageUrl,
               userId: ctx.user!.id,
-              width: PANEL_WIDTH,
-              height: PANEL_HEIGHT,
+              width: imgWidth,
+              height: imgHeight,
               meta: { prompt: panel.prompt },
               ingestion: 'Pending',
             },
@@ -1902,6 +1929,7 @@ export const comicsRouter = router({
 
       // Create panels sequentially — each panel uses the previous as context
       // Build story context so the enhancer sees the full narrative arc
+      const { width: smartWidth, height: smartHeight } = getAspectRatioDimensions(input.aspectRatio);
       const createdPanels: any[] = [];
       const previousPanelPrompts: string[] = [];
       let contextPanel: {
@@ -1933,6 +1961,9 @@ export const comicsRouter = router({
           refImages: combinedRefImages,
           userId: ctx.user!.id,
           ctx,
+          width: smartWidth,
+          height: smartHeight,
+          aspectRatio: input.aspectRatio,
           storyContext: {
             storyDescription: input.storyDescription,
             previousPanelPrompts: [...previousPanelPrompts],
@@ -2263,6 +2294,7 @@ export const comicsRouter = router({
         });
       }
       const effectiveContext = input.useContext ? contextPanel : null;
+      const { width: panelWidth, height: panelHeight } = getAspectRatioDimensions(input.aspectRatio);
 
       const allUserRefs = await dbRead.comicReference.findMany({
         where: { userId: ctx.user!.id, status: ComicReferenceStatus.Ready },
@@ -2298,7 +2330,7 @@ export const comicsRouter = router({
       ];
       if (input.includePreviousImage && contextPanel?.imageUrl) {
         const prevEdgeUrl = getEdgeUrl(contextPanel.imageUrl, { original: true });
-        allImages.push({ url: prevEdgeUrl, width: PANEL_WIDTH, height: PANEL_HEIGHT });
+        allImages.push({ url: prevEdgeUrl, width: panelWidth, height: panelHeight });
       }
 
       const token = await getOrchestratorToken(ctx.user!.id, ctx);
@@ -2329,8 +2361,8 @@ export const comicsRouter = router({
           engine: 'gemini',
           baseModel: 'NanoBanana',
           checkpointVersionId: NANOBANANA_VERSION_ID,
-          width: PANEL_WIDTH,
-          height: PANEL_HEIGHT,
+          width: panelWidth,
+          height: panelHeight,
           prompt: fullPrompt,
           negativePrompt: '',
         },
@@ -2362,8 +2394,9 @@ export const comicsRouter = router({
             negativePrompt: '',
             engine: 'gemini',
             baseModel: 'NanoBanana' as any,
-            width: PANEL_WIDTH,
-            height: PANEL_HEIGHT,
+            width: panelWidth,
+            height: panelHeight,
+            aspectRatio: input.aspectRatio,
             workflow: 'txt2img',
             sampler: 'Euler',
             steps: 25,
@@ -2593,6 +2626,8 @@ export const comicsRouter = router({
             ...combinedRefImages,
           ];
 
+          const { width: bulkPanelW, height: bulkPanelH } = getAspectRatioDimensions(panelDef.aspectRatio);
+
           const metadata = {
             sourceImageUrl: panelDef.sourceImageUrl,
             sourceImageWidth: panelDef.sourceImageWidth,
@@ -2605,8 +2640,8 @@ export const comicsRouter = router({
               engine: 'gemini',
               baseModel: 'NanoBanana',
               checkpointVersionId: NANOBANANA_VERSION_ID,
-              width: PANEL_WIDTH,
-              height: PANEL_HEIGHT,
+              width: bulkPanelW,
+              height: bulkPanelH,
               prompt: fullPrompt,
               negativePrompt: '',
             },
@@ -2638,8 +2673,9 @@ export const comicsRouter = router({
                 negativePrompt: '',
                 engine: 'gemini',
                 baseModel: 'NanoBanana' as any,
-                width: PANEL_WIDTH,
-                height: PANEL_HEIGHT,
+                width: bulkPanelW,
+                height: bulkPanelH,
+                aspectRatio: panelDef.aspectRatio,
                 workflow: 'txt2img',
                 sampler: 'Euler',
                 steps: 25,
@@ -2717,6 +2753,7 @@ export const comicsRouter = router({
             references: allUserRefs,
           });
 
+          const { width: txtPanelW, height: txtPanelH } = getAspectRatioDimensions(panelDef.aspectRatio);
           const panel = await createSinglePanel({
             projectId: input.projectId,
             chapterPosition: input.chapterPosition,
@@ -2730,6 +2767,9 @@ export const comicsRouter = router({
             refImages: combinedRefImages,
             userId: ctx.user!.id,
             ctx,
+            width: txtPanelW,
+            height: txtPanelH,
+            aspectRatio: panelDef.aspectRatio,
           });
 
           createdPanels.push(panel);
