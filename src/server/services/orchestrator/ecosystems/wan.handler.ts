@@ -129,7 +129,7 @@ export const createWanInput = defineHandler<WanCtx, WanInput>((data, ctx) => {
         enablePromptExpansion: false,
         shift: 'shift' in data ? data.shift : undefined,
         interpolatorModel: 'interpolatorModel' in data ? data.interpolatorModel : undefined,
-        useTurbo: 'useTurbo' in data ? data.useTurbo : undefined,
+        useTurbo: 'draft' in data ? data.draft : undefined,
       };
 
       if (hasImages) {

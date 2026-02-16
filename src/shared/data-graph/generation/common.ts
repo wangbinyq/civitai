@@ -488,12 +488,84 @@ function getResourceSelectOptions(ecosystem: string, resourceTypes: ModelType[])
     .filter((r) => r.baseModels.length > 0 || r.partialSupport.length > 0);
 }
 
-/** Version option for checkpoint graph */
-export type CheckpointVersionOption = {
+// =============================================================================
+// Version Option Types
+// =============================================================================
+
+/**
+ * Single version option for the model selector.
+ * Can optionally have children for hierarchical selection (e.g., precision → variant).
+ *
+ * When `children` is present, `value` is the default model ID when this option is selected.
+ * When `children` is absent (leaf), `value` is the actual model version ID.
+ */
+export type VersionOption = {
   label: string;
   value: number;
   /** Base model name for this version (used for ecosystem switching) */
   baseModel?: string;
+  /** Child options shown when this option is selected */
+  children?: VersionGroup;
+};
+
+/**
+ * Group of version options with an optional label.
+ * The label is displayed above the selector control in the UI.
+ *
+ * @example
+ * // Flat versions (Flux modes):
+ * { options: [{ label: 'Draft', value: 123 }, { label: 'Standard', value: 456 }] }
+ *
+ * // Hierarchical versions (HiDream precision + variant):
+ * {
+ *   label: 'Precision',
+ *   options: [
+ *     { label: 'FP8', value: 1771369, children: {
+ *       label: 'Variant',
+ *       options: [{ label: 'Fast', value: 1770945 }, { label: 'Dev', value: 1771369 }]
+ *     }},
+ *   ]
+ * }
+ */
+export type VersionGroup = {
+  /** Optional label for this level of the selector (e.g., "Precision", "Variant") */
+  label?: string;
+  /** Available options at this level */
+  options: VersionOption[];
+};
+
+/** @deprecated Use VersionOption instead */
+export type CheckpointVersionOption = VersionOption;
+
+/**
+ * Collect all version IDs from a VersionGroup (including nested children).
+ * Used for validation and version ID pre-registration.
+ */
+export function getAllVersionIds(group: VersionGroup): Set<number> {
+  const ids = new Set<number>();
+  function collect(g: VersionGroup) {
+    for (const opt of g.options) {
+      ids.add(opt.value);
+      if (opt.children) collect(opt.children);
+    }
+  }
+  collect(group);
+  return ids;
+}
+
+/**
+ * Model node meta type for checkpoint graphs.
+ * Kept in sync with the model node factory in createCheckpointGraph via return type annotation.
+ */
+export type CheckpointModelMeta = {
+  options: {
+    canGenerate: boolean;
+    resources: { type: ModelType; baseModels: string[]; partialSupport: string[] }[];
+    excludeIds: number[];
+  };
+  modelLocked: boolean;
+  versions: VersionGroup | undefined;
+  defaultModelId: number | undefined;
 };
 
 /**
@@ -511,7 +583,7 @@ export type CheckpointVersionOption = {
 export type WorkflowVersionConfig = Record<
   string,
   {
-    versions: CheckpointVersionOption[];
+    versions: VersionGroup;
     defaultModelId: number;
   }
 >;
@@ -524,7 +596,7 @@ export type WorkflowVersionConfig = Record<
 function findWorkflowConfig(
   workflowVersions: WorkflowVersionConfig | undefined,
   workflow: string | undefined
-): { versions: CheckpointVersionOption[]; defaultModelId: number } | undefined {
+): { versions: VersionGroup; defaultModelId: number } | undefined {
   if (!workflowVersions || !workflow) return undefined;
 
   // Try exact match first
@@ -574,6 +646,7 @@ function getWorkflowKey(
  * - A 'model' node for checkpoint selection
  * - An effect to sync baseModel when model changes to a different ecosystem
  * - Optionally, an effect to sync model versions when workflow changes
+ * - Optionally, computed dimension nodes derived from model.id (e.g., precision, variant)
  *
  * Use with `.merge()` to include in a parent graph:
  *
@@ -587,29 +660,32 @@ function getWorkflowKey(
  * const graph = new DataGraph()
  *   .merge(
  *     (ctx) => createCheckpointGraph({
- *       versions: fluxModeVersionOptions,
+ *       versions: { options: fluxModeVersionOptions },
  *       modelLocked: ctx.workflow === 'txt2img:draft',
  *     }),
  *     ['workflow']
  *   );
  *
- * // Workflow-specific versions with automatic sync
+ * // With hierarchical versions (e.g., HiDream precision+variant)
  * const graph = new DataGraph()
  *   .merge(
- *     (ctx) => createCheckpointGraph({
- *       workflowVersions: {
- *         txt2vid: { versions: txt2vidVersions, defaultModelId: 123 },
- *         txt2img: { versions: img2imgVersions, defaultModelId: 456 },
+ *     () => createCheckpointGraph({
+ *       defaultModelId: 1771369,
+ *       versions: {
+ *         label: 'Precision',
+ *         options: [
+ *           { label: 'FP8', value: 1771369, children: { label: 'Variant', options: [...] } },
+ *           { label: 'FP16', value: 1769068, children: { label: 'Variant', options: [...] } },
+ *         ],
  *       },
- *       currentWorkflow: ctx.workflow,
  *     }),
- *     ['workflow']
+ *     []
  *   );
  * ```
  */
-export function createCheckpointGraph(options?: {
-  /** Version options for the model selector (e.g., Flux modes) */
-  versions?: CheckpointVersionOption[];
+type CheckpointGraphOptions = {
+  /** Version options for the model selector (e.g., Flux modes, HiDream precision+variant) */
+  versions?: VersionGroup;
   /** Whether to lock the model (hide swap button) */
   modelLocked?: boolean;
   /** Default model version ID override */
@@ -622,7 +698,15 @@ export function createCheckpointGraph(options?: {
   workflowVersions?: WorkflowVersionConfig;
   /** Current workflow value (required when using workflowVersions) */
   currentWorkflow?: string;
-}) {
+};
+
+/** Base Ctx/CtxValues types for the checkpoint graph */
+type BaseCheckpointCtx = { workflow: string; ecosystem: string; model?: ResourceData };
+type BaseCheckpointValues = { workflow: string; ecosystem: string; model: ResourceData };
+
+export function createCheckpointGraph(
+  options?: CheckpointGraphOptions
+): DataGraph<BaseCheckpointCtx, GenerationCtx, { model: CheckpointModelMeta }, BaseCheckpointValues> {
   // Get versions and defaultModelId from workflowVersions if provided
   // Use prefix matching: 'img2vid:ref2vid' matches 'img2vid' config
   const workflowConfig = findWorkflowConfig(options?.workflowVersions, options?.currentWorkflow);
@@ -661,7 +745,7 @@ export function createCheckpointGraph(options?: {
       if (!targetConfig) return model;
 
       // Skip if model is already valid for current workflow
-      const targetVersionIds = new Set(targetConfig.versions.map((v) => v.value));
+      const targetVersionIds = getAllVersionIds(targetConfig.versions);
       if (targetVersionIds.has(model.id)) return model;
 
       // Find equivalent version in target workflow
@@ -679,7 +763,7 @@ export function createCheckpointGraph(options?: {
     };
   };
 
-  return new DataGraph<{ workflow: string; ecosystem: string }, GenerationCtx>()
+  const baseGraph = new DataGraph<{ workflow: string; ecosystem: string }, GenerationCtx>()
     .node(
       'model',
       (ctx, ext) => {
@@ -688,7 +772,7 @@ export function createCheckpointGraph(options?: {
         const modelVersionId = defaultModelId ?? ecosystemDefaults?.model?.id;
         const modelLocked = options?.modelLocked ?? ecosystemDefaults?.modelLocked ?? false;
 
-        const validVersionIds = versions ? new Set(versions.map((v) => v.value)) : undefined;
+        const validVersionIds = versions ? getAllVersionIds(versions) : undefined;
 
         const checkpointInputSchema = z
           .union([
@@ -722,16 +806,14 @@ export function createCheckpointGraph(options?: {
             ? { id: modelVersionId, model: { type: 'Checkpoint' } }
             : undefined,
           // Meta is computed from value to derive excludeIds
-          meta: (_ctx, _ext, value: ResourceData | undefined) => ({
+          meta: (_ctx, _ext, value: ResourceData | undefined): CheckpointModelMeta => ({
             options: {
               canGenerate: true,
               resources: getResourceSelectOptions(ctx.ecosystem, ['Checkpoint']),
               excludeIds: value ? [value.id] : [],
             },
             modelLocked,
-            // Versions are always passed; showVersionSelector computed determines visibility
             versions,
-            // Default model ID for "revert to default" functionality
             defaultModelId: modelVersionId,
           }),
           // Transform model version when workflow changes (if workflowVersions configured)
@@ -775,6 +857,11 @@ export function createCheckpointGraph(options?: {
       },
       ['model']
     );
+
+  // Cast needed: DataGraph infers `model` as required from .node('model', ...) but
+  // BaseCheckpointCtx declares it optional (it doesn't exist before the node creates it).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return baseGraph as any;
 }
 
 /** Version mapping with id and optional baseModel */
@@ -793,7 +880,7 @@ function buildVersionMappings(
 
   // For each workflow's versions, map to equivalent versions in other workflows
   for (const sourceWorkflow of workflows) {
-    const sourceVersions = workflowVersions[sourceWorkflow].versions;
+    const sourceVersions = workflowVersions[sourceWorkflow].versions.options;
 
     for (let i = 0; i < sourceVersions.length; i++) {
       const sourceId = sourceVersions[i].value;
@@ -802,7 +889,7 @@ function buildVersionMappings(
       // Find equivalent version in each other workflow (same index)
       for (const targetWorkflow of workflows) {
         if (targetWorkflow === sourceWorkflow) continue;
-        const targetVersions = workflowVersions[targetWorkflow].versions;
+        const targetVersions = workflowVersions[targetWorkflow].versions.options;
         if (i < targetVersions.length) {
           const targetVersion = targetVersions[i];
           equivalents[targetWorkflow] = {

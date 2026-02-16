@@ -88,7 +88,7 @@ export const seedreamGraph = new DataGraph<{ ecosystem: string; workflow: string
   .merge(
     () =>
       createCheckpointGraph({
-        versions: seedreamVersionOptions,
+        versions: { options: seedreamVersionOptions },
         defaultModelId: seedreamVersionIds['v4.5'],
       }),
     []

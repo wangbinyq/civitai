@@ -76,7 +76,7 @@ export const openaiGraph = new DataGraph<{ ecosystem: string; workflow: string }
   .merge(
     () =>
       createCheckpointGraph({
-        versions: openaiModeVersionOptions,
+        versions: { options: openaiModeVersionOptions },
         defaultModelId: openaiVersionIds['v1.5'],
       }),
     []

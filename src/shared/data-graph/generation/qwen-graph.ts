@@ -52,11 +52,11 @@ const qwenImg2ImgVersionOptions = [
 /** Workflow-specific version configuration */
 const qwenWorkflowVersions = {
   txt2img: {
-    versions: qwenTxt2ImgVersionOptions,
+    versions: { options: qwenTxt2ImgVersionOptions },
     defaultModelId: qwenVersionIds.txt2img_v2512,
   },
   'img2img:edit': {
-    versions: qwenImg2ImgVersionOptions,
+    versions: { options: qwenImg2ImgVersionOptions },
     defaultModelId: qwenVersionIds.img2img_v2511,
   },
 };

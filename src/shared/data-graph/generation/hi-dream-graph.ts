@@ -16,7 +16,6 @@
  * Note: Supports LoRA resources. No CLIP skip.
  */
 
-import z from 'zod';
 import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
@@ -28,8 +27,10 @@ import {
   samplerNode,
   seedNode,
   stepsNode,
+  type VersionGroup,
   type ResourceData,
 } from './common';
+
 
 // =============================================================================
 // HiDream Variant/Precision Constants
@@ -50,6 +51,9 @@ const hiDreamResources = [
   { id: 1769068, variant: 'dev' as const, precision: 'fp16' as const },
   { id: 1768731, variant: 'fast' as const, precision: 'fp16' as const },
 ];
+
+/** Map from version ID to resource entry */
+const versionIdToResource = new Map(hiDreamResources.map((r) => [r.id, r]));
 
 /** Map from version ID to variant */
 const versionIdToVariant = new Map<number, HiDreamVariant>(
@@ -78,11 +82,18 @@ const variantOptionsByPrecision: Record<
   ],
 };
 
-/** Version options for checkpoint selector (all variants/precisions) */
-const hiDreamVersionOptions = hiDreamResources.map((r) => ({
-  label: `${r.precision.toUpperCase()} ${r.variant}`,
-  value: r.id,
-}));
+/**
+ * Resolve a HiDream version ID from precision + variant.
+ * Handles the cascade: if the requested combo doesn't exist (e.g. fp16 full),
+ * falls back to 'dev' for the given precision.
+ */
+export function getHiDreamVersionId(precision: HiDreamPrecision, variant: HiDreamVariant): number {
+  const match = hiDreamResources.find((r) => r.precision === precision && r.variant === variant);
+  if (match) return match.id;
+  // Fallback: requested variant unavailable for this precision (e.g. fp16 + full)
+  const fallback = hiDreamResources.find((r) => r.precision === precision && r.variant === 'dev');
+  return fallback!.id;
+}
 
 // =============================================================================
 // Aspect Ratios
@@ -160,10 +171,45 @@ const fullModeGraph = new DataGraph<HiDreamVariantCtx, GenerationCtx>()
 // =============================================================================
 
 /**
+ * Hierarchical version options for HiDream.
+ * Top level: precision (FP8/FP16), each with default model ID.
+ * Second level: variant (Fast/Dev/Full), each mapping to a specific model version.
+ */
+const hiDreamVersions: VersionGroup = {
+  label: 'Precision',
+  options: [
+    {
+      label: 'FP8',
+      value: 1771369, // default: fp8 dev
+      children: {
+        label: 'Variant',
+        options: [
+          { label: 'Fast', value: 1770945 },
+          { label: 'Dev', value: 1771369 },
+          { label: 'Full', value: 1772448 },
+        ],
+      },
+    },
+    {
+      label: 'FP16',
+      value: 1769068, // default: fp16 dev
+      children: {
+        label: 'Variant',
+        options: [
+          { label: 'Fast', value: 1768731 },
+          { label: 'Dev', value: 1769068 },
+        ],
+      },
+    },
+  ],
+};
+
+/**
  * HiDream family controls.
  *
  * Meta only contains dynamic props - static props like label are in components.
- * Uses discriminatedUnion on 'hiDreamVariant' computed from model.id:
+ * Versions use a hierarchical VersionGroup (precision → variant → model ID).
+ * Discriminates on 'hiDreamVariant' (computed from model.id):
  * - fast/dev: aspectRatio, seed (other controls locked/hidden)
  * - full: resources, aspectRatio, negativePrompt, sampler, cfgScale, steps, seed
  */
@@ -171,29 +217,20 @@ export const hiDreamGraph = new DataGraph<
   { ecosystem: string; workflow: string; model: ResourceData },
   GenerationCtx
 >()
-  // Merge checkpoint graph with version options
   .merge(
     () =>
       createCheckpointGraph({
-        versions: hiDreamVersionOptions,
         defaultModelId: 1771369, // fp8 dev as default
+        versions: hiDreamVersions,
       }),
     []
   )
-  // Computed: derive HiDream variant from model.id (version ID)
+  // Computed variant for discriminator — derived from model.id
   .computed(
     'hiDreamVariant',
-    (ctx): HiDreamVariant => {
-      const modelId = ctx.model?.id;
-      if (modelId) {
-        const variant = versionIdToVariant.get(modelId);
-        if (variant) return variant;
-      }
-      return 'dev'; // Default to dev if unknown
-    },
+    (ctx) => (ctx.model?.id ? versionIdToVariant.get(ctx.model.id) : undefined) ?? 'dev',
     ['model']
   )
-  // Discriminated union based on hiDreamVariant
   .discriminator('hiDreamVariant', {
     fast: fastDevModeGraph,
     dev: fastDevModeGraph,
@@ -201,4 +238,4 @@ export const hiDreamGraph = new DataGraph<
   });
 
 // Export for use in components
-export { hiDreamVersionOptions, hiDreamResources, precisionOptions, variantOptionsByPrecision };
+export { hiDreamResources, precisionOptions, variantOptionsByPrecision };

@@ -207,7 +207,7 @@ export const fluxGraph = new DataGraph<
   .merge(
     (ctx) =>
       createCheckpointGraph({
-        versions: fluxModeVersionOptions,
+        versions: { options: fluxModeVersionOptions },
         modelLocked: ctx.workflow === 'txt2img:draft',
         defaultModelId: fluxVersionIds.standard,
       }),

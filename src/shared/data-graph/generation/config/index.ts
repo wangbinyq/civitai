@@ -32,3 +32,17 @@ export {
 export type { WorkflowConfig, WorkflowConfigs, WorkflowCategory, WorkflowGroup } from './types';
 
 export type { WorkflowOption } from './workflows';
+
+// Export sampler/scheduler compatibility
+export {
+  CompatibilityRating,
+  compatibilitySamplers,
+  compatibilitySchedulers,
+  getEcosystemCompatibility,
+  getCompatibilityRating,
+} from './sampler-scheduler-compatibility';
+export type {
+  CompatibilitySampler,
+  CompatibilityScheduler,
+  SamplerSchedulerEntry,
+} from './sampler-scheduler-compatibility';

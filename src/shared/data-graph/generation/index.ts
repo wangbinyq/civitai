@@ -78,11 +78,24 @@ export {
   createCheckpointGraph,
   // Types
   type AspectRatioOption,
+  type VersionOption,
+  type VersionGroup,
   type CheckpointVersionOption,
+  type CheckpointModelMeta,
   type WorkflowVersionConfig,
+  getAllVersionIds,
   type VideoMetadata,
   type VideoValue,
   type ImagesNodeConfig,
   type ImageSlotConfig,
 } from './common';
+export {
+  hiDreamGraph,
+  // Legacy exports — used by GenerationForm2.tsx via hidream.config.ts pattern
+  precisionOptions as hiDreamPrecisionOptions,
+  variantOptionsByPrecision as hiDreamVariantOptionsByPrecision,
+  getHiDreamVersionId,
+  type HiDreamPrecision,
+  type HiDreamVariant,
+} from './hi-dream-graph';
 export type { GenerationCtx } from './context';

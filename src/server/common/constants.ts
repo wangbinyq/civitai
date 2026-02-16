@@ -597,8 +597,6 @@ export const baseModelLicenses: Record<BaseModel, LicenseDetails | undefined> = 
   Kling: baseLicenses['kling'],
   'Vidu Q1': baseLicenses['vidu'],
   Seedance: baseLicenses['seedream'],
-  'Seedance 1.5': baseLicenses['seedream'],
-  'Seedance 2.0': baseLicenses['seedream'],
 };
 
 export type ModelFileType = (typeof constants.modelFileTypes)[number];

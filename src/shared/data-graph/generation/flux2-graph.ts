@@ -159,7 +159,7 @@ export const flux2Graph = new DataGraph<
   .merge(
     () =>
       createCheckpointGraph({
-        versions: flux2ModeVersionOptions,
+        versions: { options: flux2ModeVersionOptions },
         defaultModelId: flux2VersionIds.dev,
       }),
     []

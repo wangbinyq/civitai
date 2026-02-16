@@ -252,6 +252,11 @@ function formatGenerationData(data: LegacyGenerationData): PartialFormData {
   }
 
   return {
+    // Explicitly default image fields so stale values from the previous form state
+    // don't survive the merge in setValues (which does {...formData, ...params}).
+    sourceImage: null,
+    images: [],
+    imageAnnotations: [],
     ...params,
     baseModel,
     model: checkpoint,

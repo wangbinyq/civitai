@@ -167,7 +167,7 @@ export const zImageGraph = new DataGraph<{ ecosystem: string; workflow: string }
   // Merge checkpoint graph with version options (defaultModelId inferred from baseModel)
   .merge(
     createCheckpointGraph({
-      versions: zImageModeVersionOptions,
+      versions: { options: zImageModeVersionOptions },
     })
   )
   // Computed: derive zImage mode from baseModel

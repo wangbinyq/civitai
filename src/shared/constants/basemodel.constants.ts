@@ -173,9 +173,7 @@ export const ECO = {
   Kling: 49,
   Haiper: 50,
   Lightricks: 51,
-  Seedance: 52,
-  Seedance15: 53,
-  Seedance2: 54,
+  Seedance: 60,
   Anima: 59,
 
   // Child ecosystems of SDXL
@@ -633,20 +631,6 @@ export const ecosystems: EcosystemRecord[] = [
     name: 'seedance',
     displayName: 'Seedance',
     sortOrder: 215,
-  },
-  {
-    id: ECO.Seedance15,
-    key: 'Seedance15',
-    name: 'seedance15',
-    displayName: 'Seedance 1.5',
-    sortOrder: 216,
-  },
-  {
-    id: ECO.Seedance2,
-    key: 'Seedance2',
-    name: 'seedance2',
-    displayName: 'Seedance 2.0',
-    sortOrder: 217,
   },
   { id: ECO.ODOR, key: 'ODOR', name: 'odor', displayName: 'ODOR', sortOrder: 208 },
   {
@@ -1126,18 +1110,6 @@ export const ecosystemSettings: EcosystemSettings[] = [
     },
   },
   {
-    ecosystemId: ECO.Seedance15,
-    defaults: {
-      modelLocked: true,
-    },
-  },
-  {
-    ecosystemId: ECO.Seedance2,
-    defaults: {
-      modelLocked: true,
-    },
-  },
-  {
     ecosystemId: ECO.Other,
     defaults: {
       model: { id: 164821 },
@@ -1483,8 +1455,6 @@ export const BM = {
   MiniMax: 68,
   Kling: 69,
   Seedance: 70,
-  Seedance15: 73,
-  Seedance2: 72,
   Anima: 77,
 } as const;
 
@@ -2461,27 +2431,6 @@ export const baseModels: BaseModelRecord[] = [
     licenseId: 23,
   },
 
-  // Seedance 1.5
-  {
-    id: BM.Seedance15,
-    name: 'Seedance 1.5',
-    description: "ByteDance's video generation model",
-    type: 'video',
-    ecosystemId: ECO.Seedance15,
-    hidden: true,
-    licenseId: 23,
-  },
-
-  // Seedance 2.0
-  {
-    id: BM.Seedance2,
-    name: 'Seedance 2.0',
-    description: "ByteDance's next-generation video generation model",
-    type: 'video',
-    ecosystemId: ECO.Seedance2,
-    hidden: true,
-    licenseId: 23,
-  },
 ];
 
 export const baseModelById = new Map(baseModels.map((m) => [m.id, m]));
@@ -2967,8 +2916,8 @@ export const ecosystemGroups: EcosystemGroup[] = [
   {
     id: 'Seedance',
     displayName: 'Seedance',
-    ecosystemIds: [ECO.Seedance, ECO.Seedance15, ECO.Seedance2],
-    defaultEcosystemId: ECO.Seedance2,
+    ecosystemIds: [ECO.Seedance],
+    defaultEcosystemId: ECO.Seedance,
     sortOrder: 215,
   },
   {

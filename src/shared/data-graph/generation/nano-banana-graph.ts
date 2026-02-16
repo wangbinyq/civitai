@@ -124,7 +124,7 @@ export const nanoBananaGraph = new DataGraph<
   .merge(
     () =>
       createCheckpointGraph({
-        versions: nanoBananaModeVersionOptions,
+        versions: { options: nanoBananaModeVersionOptions },
         defaultModelId: nanoBananaVersionIds.standard,
       }),
     []

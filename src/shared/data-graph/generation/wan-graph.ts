@@ -281,7 +281,7 @@ const wan22Graph = new DataGraph<WanVersionCtx, GenerationCtx>()
     defaultValue: 'none' as const,
     meta: { options: wanInterpolatorModels },
   })
-  .node('useTurbo', {
+  .node('draft', {
     input: z.boolean().optional(),
     output: z.boolean(),
     defaultValue: false,

@@ -91,7 +91,7 @@ export const fluxKontextGraph = new DataGraph<
   .merge(
     () =>
       createCheckpointGraph({
-        versions: fluxKontextModeVersionOptions,
+        versions: { options: fluxKontextModeVersionOptions },
         defaultModelId: fluxKontextVersionIds.pro,
       }),
     []

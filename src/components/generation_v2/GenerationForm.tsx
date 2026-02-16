@@ -30,7 +30,7 @@ import {
   Tabs,
   Text,
 } from '@mantine/core';
-import React, { useCallback, useState, useRef, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 
 import { CopyButton } from '~/components/CopyButton/CopyButton';
 import { TrainedWords } from '~/components/TrainedWords/TrainedWords';
@@ -39,7 +39,10 @@ import { useCurrentUser } from '~/hooks/useCurrentUser';
 import { Controller, MultiController, useGraph } from '~/libs/data-graph/react';
 import {
   type GenerationGraphTypes,
+  type VersionOption,
+  type VersionGroup,
   type VideoValue,
+  getAllVersionIds,
   wanVersionOptions,
   wanVersionDefs,
 } from '~/shared/data-graph/generation';
@@ -306,29 +309,44 @@ export function GenerationForm() {
           <Controller
             graph={graph}
             name="model"
-            render={({ value, meta, onChange }) => (
-              <ResourceSelectInput
-                value={value as any}
-                onChange={onChange as any}
-                label={
-                  <ControllerLabel
-                    label="Model"
-                    info="Models are the resources you're generating with. Using a different base model can drastically alter the style and composition of images, while adding additional resources can change the characters, concepts and objects."
+            render={({ value, meta, onChange }) => {
+              const hasHierarchicalVersions = meta.versions?.options.some(
+                (o: VersionOption) => o.children
+              );
+              return (
+                <>
+                  <ResourceSelectInput
+                    value={value as any}
+                    onChange={onChange as any}
+                    label={
+                      <ControllerLabel
+                        label="Model"
+                        info="Models are the resources you're generating with. Using a different base model can drastically alter the style and composition of images, while adding additional resources can change the characters, concepts and objects."
+                      />
+                    }
+                    buttonLabel="Select Model"
+                    modalTitle="Select Model"
+                    options={meta.options}
+                    allowRemove={false}
+                    allowSwap={!meta.modelLocked}
+                    onRevertToDefault={
+                      meta.defaultModelId
+                        ? () => onChange({ id: meta.defaultModelId } as any)
+                        : undefined
+                    }
+                    versions={!hasHierarchicalVersions ? meta.versions?.options : undefined}
                   />
-                }
-                buttonLabel="Select Model"
-                modalTitle="Select Model"
-                options={meta.options}
-                allowRemove={false}
-                allowSwap={!meta.modelLocked}
-                onRevertToDefault={
-                  meta.defaultModelId
-                    ? () => onChange({ id: meta.defaultModelId } as any)
-                    : undefined
-                }
-                versions={meta.versions}
-              />
-            )}
+                  {/* Hierarchical version selectors (e.g., precision/variant for HiDream) */}
+                  {hasHierarchicalVersions && meta.versions && (
+                    <VersionGroupSelector
+                      versions={meta.versions}
+                      modelId={(value as any)?.id}
+                      onChange={onChange as any}
+                    />
+                  )}
+                </>
+              );
+            }}
           />
 
           {/* Wan version picker */}
@@ -968,7 +986,7 @@ export function GenerationForm() {
             />
 
             {/* Wan: Draft mode toggle (v2.2-5b) */}
-            {/* <Controller
+            <Controller
               graph={graph}
               name="draft"
               render={({ value, onChange }) => (
@@ -979,7 +997,7 @@ export function GenerationForm() {
                   description="Generate faster at lower quality"
                 />
               )}
-            /> */}
+            />
 
             {/* Wan: Shift parameter (v2.2, v2.2-5b) */}
             <Controller
@@ -1011,10 +1029,10 @@ export function GenerationForm() {
               )}
             />
 
-            {/* Wan: Turbo mode toggle (v2.2) */}
-            <Controller
+            {/* Wan: Draft mode toggle (v2.2) */}
+            {/* <Controller
               graph={graph}
-              name="useTurbo"
+              name="draft"
               render={({ value, onChange }) => (
                 <Checkbox
                   checked={value}
@@ -1023,7 +1041,7 @@ export function GenerationForm() {
                   description="Generate faster with optimized settings"
                 />
               )}
-            />
+            /> */}
 
             {/* Kling: Generation mode (standard/professional) */}
             <Controller
@@ -1071,5 +1089,74 @@ function ControllerLabel({ label, info }: { label: React.ReactNode; info?: strin
         {info}
       </InfoPopover>
     </div>
+  );
+}
+
+/**
+ * Find the path through a VersionGroup tree that matches a given model ID.
+ * Returns an array of VersionOptions from root to leaf, or null if not found.
+ */
+function findModelPath(group: VersionGroup, modelId: number): VersionOption[] | null {
+  for (const opt of group.options) {
+    // Check children first (deeper match takes priority over parent default value)
+    if (opt.children) {
+      const subPath = findModelPath(opt.children, modelId);
+      if (subPath) return [opt, ...subPath];
+    } else if (opt.value === modelId) {
+      return [opt];
+    }
+  }
+  return null;
+}
+
+/**
+ * Hierarchical version selector for multi-level model version selection.
+ * Walks a VersionGroup tree and renders a SegmentedControl for each level.
+ * Used for ecosystems like HiDream where model selection has multiple axes (precision → variant).
+ */
+function VersionGroupSelector({
+  versions,
+  modelId,
+  onChange,
+}: {
+  versions: VersionGroup;
+  modelId: number | undefined;
+  onChange: (value: { id: number }) => void;
+}) {
+  const allIds = useMemo(() => getAllVersionIds(versions), [versions]);
+
+  // Only render if current model is a known version in the tree
+  if (!modelId || !allIds.has(modelId)) return null;
+
+  const path = findModelPath(versions, modelId);
+
+  // Build levels to render by walking the tree along the selected path
+  const levels: Array<{ group: VersionGroup; selectedValue: number }> = [];
+  let currentGroup: VersionGroup | undefined = versions;
+  let pathIdx = 0;
+
+  while (currentGroup && currentGroup.options.length > 0) {
+    const selected: VersionOption = path?.[pathIdx] ?? currentGroup.options[0];
+    levels.push({ group: currentGroup, selectedValue: selected.value });
+    currentGroup = selected.children;
+    pathIdx++;
+  }
+
+  return (
+    <>
+      {levels.map((level, i) => (
+        <div key={level.group.label ?? i} className="flex flex-col gap-1">
+          {level.group.label && <Input.Label>{level.group.label}</Input.Label>}
+          <SegmentedControlWrapper
+            value={level.selectedValue.toString()}
+            onChange={(v) => onChange({ id: Number(v) })}
+            data={level.group.options.map((o) => ({
+              label: o.label,
+              value: o.value.toString(),
+            }))}
+          />
+        </div>
+      ))}
+    </>
   );
 }

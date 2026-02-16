@@ -141,11 +141,15 @@ function ecosystemSupportsWorkflow(baseModel: string, workflowKey: string): bool
 /**
  * Refines an img2img process into the correct workflow variant.
  *
- * - With baseModel → `img2img` (images trigger edit mode in handlers)
  * - No inferable baseModel → `img2img:upscale` (likely standalone upscale)
+ * - Ecosystem supports `img2img` → `img2img` (SD family)
+ * - Ecosystem supports `img2img:edit` → `img2img:edit` (Flux Kontext, Qwen, etc.)
+ * - Fallback → `img2img`
  */
 function resolveImg2ImgWorkflow(baseModel: string | undefined): string {
   if (!baseModel) return 'img2img:upscale';
+  if (ecosystemSupportsWorkflow(baseModel, 'img2img')) return 'img2img';
+  if (ecosystemSupportsWorkflow(baseModel, 'img2img:edit')) return 'img2img:edit';
   return 'img2img';
 }
 
@@ -527,7 +531,8 @@ export function mapDataToGraphInput(
     process: _process,
     engine: _engine,
     fluxMode: _fluxMode,
-    draft: _draft, // Consumed by resolveWorkflow → txt2img:draft variant
+    draft: _draft, // Consumed by resolveWorkflow → txt2img:draft variant (image workflows)
+    turbo: _turbo, // Legacy Wan field — now mapped to 'draft' node
     // Legacy field names that map to different graph node keys
     openAITransparentBackground,
     openAIQuality,
@@ -545,6 +550,13 @@ export function mapDataToGraphInput(
     _transformations as Array<Record<string, unknown>>
   );
 
+  // For video workflows, pass draft through (image workflows consume it via resolveWorkflow).
+  // Also map legacy 'turbo' → 'draft' for old stored Wan data.
+  const isVideoWorkflow =
+    typeof workflow === 'string' &&
+    ['txt2vid', 'img2vid', 'vid2vid'].some((prefix) => workflow.startsWith(prefix));
+  const videoDraft = isVideoWorkflow ? (_draft ?? _turbo ?? undefined) : undefined;
+
   return removeEmpty({
     ...rest,
     workflow,
@@ -552,6 +564,8 @@ export function mapDataToGraphInput(
     aspectRatio,
     images,
     transformations: mappedTransformations,
+    // For video workflows, preserve draft (not consumed by resolveWorkflow)
+    ...(videoDraft != null && { draft: !!videoDraft }),
     // Map legacy field names to graph node keys
     ...(openAITransparentBackground != null && { transparent: openAITransparentBackground }),
     ...(openAIQuality != null && { quality: openAIQuality }),
@@ -667,6 +681,8 @@ export function mapGraphToLegacyParams(
     workflow,
     // v2 DataGraph uses 'wanVersion'; legacy form uses 'version'
     wanVersion,
+    // Extract draft so the explicit return value doesn't shadow it from ...rest
+    draft: graphDraft,
     // Pass through everything else
     ...rest
   } = graphOutput;
@@ -688,6 +704,11 @@ export function mapGraphToLegacyParams(
     if (workflow === 'txt2img:draft') {
       legacyWorkflow = 'txt2img';
       draft = true;
+    }
+
+    // Preserve draft from graph output (e.g. Wan's draft node) when not set by workflow
+    if (graphDraft && draft == null) {
+      draft = !!graphDraft;
     }
 
     // Restore process for video workflows.

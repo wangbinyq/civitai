@@ -171,7 +171,7 @@ export const flux2KleinGraph = new DataGraph<
   // Merge checkpoint graph with version options (defaultModelId inferred from baseModel)
   .merge(
     createCheckpointGraph({
-      versions: flux2KleinModeVersionOptions,
+      versions: { options: flux2KleinModeVersionOptions },
     })
   )
   // Computed: derive flux2Klein mode from baseModel

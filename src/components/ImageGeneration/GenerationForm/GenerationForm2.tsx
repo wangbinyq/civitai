@@ -346,7 +346,12 @@ export function GenerationFormContent() {
     const imageGenEngine = imageGenModelVersionMap.get(model.id);
     if (imageGenEngine) params.engine = imageGenEngine;
 
+    // Clear stale image fields based on which input the ecosystem uses.
+    // Ecosystems using multi-image input (Flux2, Qwen, etc.) should not send sourceImage,
+    // and ecosystems using single sourceImage should not send images.
     if (workflowDefinition?.type === 'txt2img') params.sourceImage = null;
+    if (showImg2ImgMultiple) params.sourceImage = null;
+    else params.images = null;
 
     const resources = [modelClone, ...additionalResources, vae]
       .filter(isDefined)
@@ -572,6 +577,8 @@ export function GenerationFormContent() {
                 !isZImageBase &&
                 !isFlux2 &&
                 !isFlux2Klein &&
+                !isHiDream &&
+                !isNanoBanana &&
                 !isPonyV7;
             const minQuantity = !!isDraft ? 4 : 1;
             const maxQuantity = isOpenAI
@@ -700,6 +707,7 @@ export function GenerationFormContent() {
                 !isPonyV7 &&
                 !isNanoBanana &&
                 !isSeedream &&
+                !isFlux2 &&
                 !isFlux2Klein &&
                 !isQwenImageEdit) ||
               isFluxKontext;

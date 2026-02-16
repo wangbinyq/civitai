@@ -1,5 +1,4 @@
-import { Checkbox, Menu, Modal, useComputedColorScheme, useMantineTheme } from '@mantine/core';
-import { useHotkeys } from '@mantine/hooks';
+import { Checkbox, Menu } from '@mantine/core';
 import {
   IconDotsVertical,
   IconHeart,
@@ -9,26 +8,17 @@ import {
   IconWand,
 } from '@tabler/icons-react';
 import clsx from 'clsx';
-import type { EmblaCarouselType } from 'embla-carousel';
 import type { DragEvent, MouseEvent } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
-import { useDialogContext } from '~/components/Dialog/DialogProvider';
+import { triggerRoutedDialog } from '~/components/Dialog/RoutedDialogLink';
 import { dialogStore } from '~/components/Dialog/dialogStore';
 import { EdgeMedia2 } from '~/components/EdgeMedia/EdgeMedia';
-import { Embla } from '~/components/EmblaCarousel/EmblaCarousel';
 import { useGeneratedItemStore } from '~/components/Generation/stores/generated-item.store';
-import { GenerationDetails } from '~/components/ImageGeneration/GenerationDetails';
 import { orchestratorImageSelect } from '~/components/ImageGeneration/utils/generationImage.select';
-import {
-  useGetTextToImageRequestsImages,
-  useUpdateImageStepMetadata,
-} from '~/components/ImageGeneration/utils/generationRequestHooks';
+import { useUpdateImageStepMetadata } from '~/components/ImageGeneration/utils/generationRequestHooks';
 import { ImageMetaPopover } from '~/components/ImageMeta/ImageMeta';
-import {
-  IntersectionObserverProvider,
-  useInViewDynamic,
-} from '~/components/IntersectionObserver/IntersectionObserverProvider';
+import { useInViewDynamic } from '~/components/IntersectionObserver/IntersectionObserverProvider';
 import { LegacyActionIcon } from '~/components/LegacyActionIcon/LegacyActionIcon';
 import { TextToImageQualityFeedbackModal } from '~/components/Modals/GenerationQualityFeedbackModal';
 import { useTourContext } from '~/components/Tours/ToursProvider';
@@ -87,11 +77,9 @@ export function GeneratedImage({
     if (isSelecting) {
       handleToggleSelect();
     } else {
-      dialogStore.trigger({
-        id: 'generated-image',
-        component: GeneratedImageLightbox,
-        props: { image },
-        target: '#main',
+      triggerRoutedDialog({
+        name: 'generatedImage',
+        state: { imageId: image.id, workflowId: request.id },
       });
     }
   };
@@ -406,116 +394,6 @@ function GeneratedImageActions({
         <IconThumbDown size={16} />
       </LegacyActionIcon>
     </div>
-  );
-}
-
-export function GeneratedImageLightbox({ image }: { image: NormalizedGeneratedImage }) {
-  const dialog = useDialogContext();
-  const { requests, steps } = useGetTextToImageRequestsImages();
-  const theme = useMantineTheme();
-  const colorScheme = useComputedColorScheme('dark');
-
-  const [embla, setEmbla] = useState<EmblaCarouselType | null>(null);
-  // useAnimationOffsetEffect(embla, TRANSITION_DURATION);
-
-  useHotkeys([
-    ['ArrowLeft', () => embla?.scrollPrev()],
-    ['ArrowRight', () => embla?.scrollNext()],
-  ]);
-
-  const images = steps.flatMap(({ images, ...step }) =>
-    images
-      .filter((x) => x.status === 'succeeded' && !x.blockedReason)
-      .map((image) => ({ ...image, params: { ...step.params, seed: image.seed }, step }))
-  );
-  const workflows = requests?.map(({ steps, ...workflow }) => workflow) ?? [];
-
-  const currentImageIdRef = useRef(image.id);
-  const initialSlide = images.findIndex((item) => item.id === image.id);
-  const [slide, setSlide] = useState(initialSlide > -1 ? initialSlide : 0);
-
-  const handleSlideChange = (index: number) => {
-    setSlide(index);
-    if (images[index]) currentImageIdRef.current = images[index].id;
-  };
-
-  // When images array shifts, re-sync slide index to the tracked image
-  useEffect(() => {
-    const newIndex = images.findIndex((item) => item.id === currentImageIdRef.current);
-    if (newIndex !== -1 && newIndex !== slide) {
-      embla?.scrollTo(newIndex, true);
-      setSlide(newIndex);
-    }
-  }, [images, embla]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return (
-    <Modal
-      {...dialog}
-      closeButtonProps={{
-        'aria-label': 'Close lightbox',
-      }}
-      fullScreen
-    >
-      <IntersectionObserverProvider id="generated-image-lightbox">
-        <Embla
-          align="center"
-          withControls
-          controlSize={40}
-          startIndex={slide}
-          loop
-          onSlideChange={handleSlideChange}
-          withKeyboardEvents={false}
-          setEmbla={setEmbla}
-        >
-          <Embla.Viewport>
-            <Embla.Container className="flex" style={{ height: 'calc(100vh - 84px)' }}>
-              {images.map((image, index) => {
-                const request = workflows.find((x) => x.id === image.workflowId);
-                if (!request) return null;
-                return (
-                  <Embla.Slide
-                    key={`${image.workflowId}_${image.id}`}
-                    index={index}
-                    className="flex flex-[0_0_100%] items-center justify-center"
-                  >
-                    {image.url && index === slide && (
-                      <GeneratedImage
-                        image={image}
-                        request={request}
-                        step={image.step}
-                        isLightbox
-                      />
-                    )}
-                  </Embla.Slide>
-                );
-              })}
-            </Embla.Container>
-          </Embla.Viewport>
-        </Embla>
-      </IntersectionObserverProvider>
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          right: 0,
-          width: '100%',
-          maxWidth: 450,
-          zIndex: 10,
-        }}
-      >
-        <GenerationDetails
-          label="Generation Details"
-          params={images?.[slide]?.params}
-          labelWidth={150}
-          paperProps={{ radius: 0 }}
-          controlProps={{
-            style: {
-              backgroundColor: colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[2],
-            },
-          }}
-        />
-      </div>
-    </Modal>
   );
 }
 

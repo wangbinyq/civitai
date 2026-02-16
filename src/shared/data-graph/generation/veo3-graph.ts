@@ -94,11 +94,11 @@ type Veo3Ctx = { ecosystem: string; workflow: string };
 /** Workflow-specific version configuration for Veo3 */
 const veo3WorkflowVersions = {
   txt2vid: {
-    versions: veo3Txt2VidVersionOptions,
+    versions: { options: veo3Txt2VidVersionOptions },
     defaultModelId: veo3VersionIds.txt2vid_fast,
   },
   img2vid: {
-    versions: veo3Img2VidVersionOptions,
+    versions: { options: veo3Img2VidVersionOptions },
     defaultModelId: veo3VersionIds.img2vid_fast,
   },
 };

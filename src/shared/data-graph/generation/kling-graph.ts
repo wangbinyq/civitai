@@ -102,7 +102,7 @@ export const klingGraph = new DataGraph<KlingCtx, GenerationCtx>()
   // Merge checkpoint graph with model versions
   .merge(
     createCheckpointGraph({
-      versions: klingVersionOptions,
+      versions: { options: klingVersionOptions },
       defaultModelId: klingVersionIds.v1_6,
     })
   )
