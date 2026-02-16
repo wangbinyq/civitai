@@ -1,8 +1,8 @@
 import { ECO } from '~/shared/constants/basemodel.constants';
 
-// ---------------------------------------------------------------------------
+// =============================================================================
 // Types
-// ---------------------------------------------------------------------------
+// =============================================================================
 
 export const CompatibilityRating = {
   GOOD: 'GOOD',
@@ -15,49 +15,119 @@ export const CompatibilityRating = {
 } as const;
 export type CompatibilityRating = (typeof CompatibilityRating)[keyof typeof CompatibilityRating];
 
-export const compatibilitySamplers = [
-  'euler',
-  'euler_a',
-  'heun',
-  'dpm2',
-  'dpm++2s_a',
-  'dpm++2m',
-  'dpm++2mv2',
-  'ipndm',
-  'ipndm_v',
-  'lcm',
-  'ddim_trailing',
-  'tcd',
-  'res_multistep',
-  'res_2s',
-] as const;
-export type CompatibilitySampler = (typeof compatibilitySamplers)[number];
+export type SamplerRecord = {
+  id: number;
+  key: string; // Stable sdcpp identifier (e.g., 'euler_a', 'dpm++2m')
+  displayName: string; // Human-friendly name (e.g., 'Euler Ancestral', 'DPM++ 2M')
+};
 
-export const compatibilitySchedulers = [
-  'discrete',
-  'karras',
-  'exponential',
-  'ays',
-  'gits',
-  'smoothstep',
-  'sgm_uniform',
-  'simple',
-  'kl_optimal',
-  'lcm',
-  'bong_tangent',
-] as const;
-export type CompatibilityScheduler = (typeof compatibilitySchedulers)[number];
+export type SchedulerRecord = {
+  id: number;
+  key: string; // Stable sdcpp identifier (e.g., 'karras', 'sgm_uniform')
+  displayName: string; // Human-friendly name (e.g., 'Karras', 'SGM Uniform')
+};
 
-export type SamplerSchedulerEntry = {
-  sampler: CompatibilitySampler;
-  scheduler: CompatibilityScheduler;
+export type SamplerSchedulerCompatibility = {
+  ecosystemId: number;
+  samplerId: number;
+  schedulerId: number;
   rating: CompatibilityRating;
 };
 
-// ---------------------------------------------------------------------------
-// Compact encoding helpers
-// ---------------------------------------------------------------------------
+// =============================================================================
+// Sampler Constants
+// =============================================================================
 
+export const SAMPLER = {
+  Euler: 1,
+  EulerA: 2,
+  Heun: 3,
+  DPM2: 4,
+  DPMpp2SA: 5,
+  DPMpp2M: 6,
+  DPMpp2Mv2: 7,
+  IPNDM: 8,
+  IPNDMv: 9,
+  LCM: 10,
+  DDIMTrailing: 11,
+  TCD: 12,
+  ResMultistep: 13,
+  Res2S: 14,
+} as const;
+
+// =============================================================================
+// Scheduler Constants
+// =============================================================================
+
+export const SCHEDULER = {
+  Discrete: 1,
+  Karras: 2,
+  Exponential: 3,
+  AYS: 4,
+  GITS: 5,
+  Smoothstep: 6,
+  SGMUniform: 7,
+  Simple: 8,
+  KLOptimal: 9,
+  LCM: 10,
+  BongTangent: 11,
+} as const;
+
+// =============================================================================
+// Samplers
+// =============================================================================
+
+export const samplers: SamplerRecord[] = [
+  { id: SAMPLER.Euler, key: 'euler', displayName: 'Euler' },
+  { id: SAMPLER.EulerA, key: 'euler_a', displayName: 'Euler Ancestral' },
+  { id: SAMPLER.Heun, key: 'heun', displayName: 'Heun' },
+  { id: SAMPLER.DPM2, key: 'dpm2', displayName: 'DPM2' },
+  { id: SAMPLER.DPMpp2SA, key: 'dpm++2s_a', displayName: 'DPM++ 2S Ancestral' },
+  { id: SAMPLER.DPMpp2M, key: 'dpm++2m', displayName: 'DPM++ 2M' },
+  { id: SAMPLER.DPMpp2Mv2, key: 'dpm++2mv2', displayName: 'DPM++ 2M v2' },
+  { id: SAMPLER.IPNDM, key: 'ipndm', displayName: 'iPNDM' },
+  { id: SAMPLER.IPNDMv, key: 'ipndm_v', displayName: 'iPNDM v' },
+  { id: SAMPLER.LCM, key: 'lcm', displayName: 'LCM' },
+  { id: SAMPLER.DDIMTrailing, key: 'ddim_trailing', displayName: 'DDIM Trailing' },
+  { id: SAMPLER.TCD, key: 'tcd', displayName: 'TCD' },
+  { id: SAMPLER.ResMultistep, key: 'res_multistep', displayName: 'Res Multistep' },
+  { id: SAMPLER.Res2S, key: 'res_2s', displayName: 'Res 2S' },
+];
+
+// =============================================================================
+// Schedulers
+// =============================================================================
+
+export const schedulers: SchedulerRecord[] = [
+  { id: SCHEDULER.Discrete, key: 'discrete', displayName: 'Discrete' },
+  { id: SCHEDULER.Karras, key: 'karras', displayName: 'Karras' },
+  { id: SCHEDULER.Exponential, key: 'exponential', displayName: 'Exponential' },
+  { id: SCHEDULER.AYS, key: 'ays', displayName: 'AYS' },
+  { id: SCHEDULER.GITS, key: 'gits', displayName: 'GITS' },
+  { id: SCHEDULER.Smoothstep, key: 'smoothstep', displayName: 'Smoothstep' },
+  { id: SCHEDULER.SGMUniform, key: 'sgm_uniform', displayName: 'SGM Uniform' },
+  { id: SCHEDULER.Simple, key: 'simple', displayName: 'Simple' },
+  { id: SCHEDULER.KLOptimal, key: 'kl_optimal', displayName: 'KL Optimal' },
+  { id: SCHEDULER.LCM, key: 'lcm', displayName: 'LCM' },
+  { id: SCHEDULER.BongTangent, key: 'bong_tangent', displayName: 'Bong Tangent' },
+];
+
+// =============================================================================
+// Lookup Maps
+// =============================================================================
+
+export const samplerById = new Map(samplers.map((s) => [s.id, s]));
+export const samplerByKey = new Map(samplers.map((s) => [s.key, s]));
+export const schedulerById = new Map(schedulers.map((s) => [s.id, s]));
+export const schedulerByKey = new Map(schedulers.map((s) => [s.key, s]));
+
+// =============================================================================
+// Compatibility Data
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Compact encoding — internal only
+// ---------------------------------------------------------------------------
 // Ratings are stored as single-char codes to keep the data compact.
 const R = {
   G: CompatibilityRating.GOOD,
@@ -70,9 +140,9 @@ const R = {
 } as const;
 type Code = keyof typeof R;
 
-// A row encodes 14 sampler ratings for one scheduler, in `compatibilitySamplers` order.
+// A row encodes 14 sampler ratings for one scheduler, in `samplers` array order.
 type Row = [Code, Code, Code, Code, Code, Code, Code, Code, Code, Code, Code, Code, Code, Code];
-// A matrix encodes 11 scheduler rows in `compatibilitySchedulers` order.
+// A matrix encodes 11 scheduler rows in `schedulers` array order.
 type Matrix = [Row, Row, Row, Row, Row, Row, Row, Row, Row, Row, Row];
 
 // ---------------------------------------------------------------------------
@@ -237,25 +307,26 @@ const matrices: Record<number, Matrix> = {
 
 const DEFAULT_ECOSYSTEM = ECO.SD1;
 
-// ---------------------------------------------------------------------------
+// =============================================================================
 // Accessors
-// ---------------------------------------------------------------------------
+// =============================================================================
 
 function getMatrix(ecosystemId: number): Matrix {
   return matrices[ecosystemId] ?? matrices[DEFAULT_ECOSYSTEM];
 }
 
-/** Get all sampler/scheduler entries with their ratings for an ecosystem.
+/** Get all compatibility entries for an ecosystem as flat records.
  *  Falls back to SD1 data for unmapped ecosystems. */
-export function getEcosystemCompatibility(ecosystemId: number): SamplerSchedulerEntry[] {
+export function getEcosystemCompatibility(ecosystemId: number): SamplerSchedulerCompatibility[] {
   const matrix = getMatrix(ecosystemId);
-  const entries: SamplerSchedulerEntry[] = [];
-  for (let si = 0; si < compatibilitySchedulers.length; si++) {
+  const entries: SamplerSchedulerCompatibility[] = [];
+  for (let si = 0; si < schedulers.length; si++) {
     const row = matrix[si];
-    for (let sa = 0; sa < compatibilitySamplers.length; sa++) {
+    for (let sa = 0; sa < samplers.length; sa++) {
       entries.push({
-        sampler: compatibilitySamplers[sa],
-        scheduler: compatibilitySchedulers[si],
+        ecosystemId,
+        samplerId: samplers[sa].id,
+        schedulerId: schedulers[si].id,
         rating: R[row[sa]],
       });
     }
@@ -264,14 +335,21 @@ export function getEcosystemCompatibility(ecosystemId: number): SamplerScheduler
 }
 
 /** Get the rating for a specific sampler+scheduler in an ecosystem.
+ *  Accepts either numeric IDs or string keys.
  *  Falls back to SD1 data for unmapped ecosystems. */
 export function getCompatibilityRating(
   ecosystemId: number,
-  sampler: string,
-  scheduler: string
+  sampler: number | string,
+  scheduler: number | string
 ): CompatibilityRating | undefined {
-  const si = (compatibilitySchedulers as readonly string[]).indexOf(scheduler);
-  const sa = (compatibilitySamplers as readonly string[]).indexOf(sampler);
+  const sa =
+    typeof sampler === 'number'
+      ? samplers.findIndex((s) => s.id === sampler)
+      : samplers.findIndex((s) => s.key === sampler);
+  const si =
+    typeof scheduler === 'number'
+      ? schedulers.findIndex((s) => s.id === scheduler)
+      : schedulers.findIndex((s) => s.key === scheduler);
   if (si === -1 || sa === -1) return undefined;
   const matrix = getMatrix(ecosystemId);
   return R[matrix[si][sa]];

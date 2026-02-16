@@ -36,13 +36,19 @@ export type { WorkflowOption } from './workflows';
 // Export sampler/scheduler compatibility
 export {
   CompatibilityRating,
-  compatibilitySamplers,
-  compatibilitySchedulers,
+  SAMPLER,
+  SCHEDULER,
+  samplers,
+  schedulers,
+  samplerById,
+  samplerByKey,
+  schedulerById,
+  schedulerByKey,
   getEcosystemCompatibility,
   getCompatibilityRating,
 } from './sampler-scheduler-compatibility';
 export type {
-  CompatibilitySampler,
-  CompatibilityScheduler,
-  SamplerSchedulerEntry,
+  SamplerRecord,
+  SchedulerRecord,
+  SamplerSchedulerCompatibility,
 } from './sampler-scheduler-compatibility';
