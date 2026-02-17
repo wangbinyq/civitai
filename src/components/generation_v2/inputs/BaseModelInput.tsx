@@ -213,11 +213,11 @@ function BaseModelListContent({
                   <Text size="sm" fw={isSelected ? 600 : 400}>
                     {item.name}
                   </Text>
-                  {item.description && (
+                  {/* {item.description && (
                     <Text size="xs" c="dimmed" lineClamp={1}>
                       {item.description}
                     </Text>
-                  )}
+                  )} */}
                 </div>
                 {isSelected && <IconCheck size={16} className="text-blue-6" />}
                 {!item.compatible && !isSelected && (
@@ -274,11 +274,11 @@ function BaseModelListContent({
                     <Text size="sm" fw={isSelected ? 600 : 400}>
                       {item.name}
                     </Text>
-                    {item.description && (
+                    {/* {item.description && (
                       <Text size="xs" c="dimmed" lineClamp={1}>
                         {item.description}
                       </Text>
-                    )}
+                    )} */}
                   </div>
                   {isSelected && <IconCheck size={16} className="text-blue-6" />}
                   {!item.compatible && !isSelected && (

@@ -751,7 +751,7 @@ export const ecosystemSupport: EcosystemSupport[] = [
   { ecosystemId: ECO.Sora2, supportType: 'generation', modelTypes: checkpointOnly },
 
   // Mochi - checkpoint only
-  { ecosystemId: ECO.Mochi, supportType: 'generation', modelTypes: checkpointOnly },
+  // { ecosystemId: ECO.Mochi, supportType: 'generation', modelTypes: checkpointOnly },
 
   // Vidu - checkpoint only
   { ecosystemId: ECO.Vidu, supportType: 'generation', modelTypes: checkpointOnly },
@@ -1853,7 +1853,7 @@ export const baseModels: BaseModelRecord[] = [
     id: BM.Mochi,
     name: 'Mochi',
     description: "Genmo's video generation model with realistic motion synthesis",
-    type: 'image',
+    type: 'video',
     ecosystemId: ECO.Mochi,
     licenseId: 13,
   },

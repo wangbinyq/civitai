@@ -88,7 +88,6 @@ const TXT2VID_IDS = [
   ECO.WanVideo25_T2V,
   ECO.Veo3,
   ECO.Sora2,
-  ECO.Mochi,
   ECO.Vidu,
   ECO.MiniMax,
   ECO.Kling,
@@ -235,7 +234,7 @@ export const workflowConfigs: WorkflowConfigs = {
     label: 'Reference to Video',
     description: 'Generate video using a reference image',
     category: 'video',
-    ecosystemIds: [ECO.Vidu, ECO.Veo3],
+    ecosystemIds: [ECO.Vidu, ECO.Veo3, ECO.Kling],
   },
 
   // ===========================================================================
