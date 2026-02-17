@@ -605,7 +605,7 @@ export const userComicCountCache = createUserContentCountCache<UserComicCount>(
     SELECT
       p."userId" as id,
       COUNT(DISTINCT p.id)::INT as "comicCount"
-    FROM "comic_projects" p
+    FROM "ComicProject" p
     WHERE p."userId" IN (${Prisma.join(userIds)})
       AND p."status" = 'Active'
       AND EXISTS (
