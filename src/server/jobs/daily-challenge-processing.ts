@@ -1421,7 +1421,7 @@ export async function getJudgedEntries(collectionId: number, config: ChallengeCo
   }
 
   // Exclude users who won a challenge within the cooldown period
-  const recentWinners = await dbRead.$queryRaw<{ userId: number }[]>`
+  const recentWinners = await dbWrite.$queryRaw<{ userId: number }[]>`
     SELECT DISTINCT cw."userId"
     FROM "ChallengeWinner" cw
     JOIN "Challenge" c ON c.id = cw."challengeId"
