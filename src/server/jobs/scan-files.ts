@@ -6,7 +6,11 @@ import { env } from '~/env/server';
 import { dbWrite } from '~/server/db/client';
 
 import { createJob } from './job';
-import { getDownloadUrl } from '~/utils/delivery-worker';
+import {
+  getDownloadUrl,
+  getDownloadUrlByFileId,
+  isStorageResolverEnabled,
+} from '~/utils/delivery-worker';
 
 export const scanFilesJob = createJob('scan-files', '*/5 * * * *', async () => {
   const scanCutOff = dayjs().subtract(1, 'day').toDate();
@@ -85,9 +89,13 @@ export async function requestScannerTasks({
 
   let fileUrl = s3Url;
   try {
-    ({ url: fileUrl } = await getDownloadUrl(s3Url));
+    if (isStorageResolverEnabled()) {
+      ({ url: fileUrl } = await getDownloadUrlByFileId(fileId));
+    } else {
+      ({ url: fileUrl } = await getDownloadUrl(s3Url));
+    }
   } catch (error) {
-    console.error(`Failed to get download url for ${s3Url}`);
+    console.error(`Failed to get download url for file ${fileId} (${s3Url})`);
     return false;
   }
 
