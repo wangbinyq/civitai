@@ -322,7 +322,8 @@ export async function applyWorkflowWithCheck({
   image,
   step,
   compatible,
-}: ApplyWorkflowOptions & { ecosystemKey?: string; compatible: boolean }) {
+  isLightbox,
+}: ApplyWorkflowOptions & { ecosystemKey?: string; compatible: boolean; isLightbox?: boolean }) {
   // Resolve alias option IDs (e.g., 'img2vid#0') to the actual graph key ('img2vid')
   const option = workflowOptionById.get(rawWorkflowId);
   const workflowId = option?.graphKey ?? rawWorkflowId;
@@ -335,6 +336,9 @@ export async function applyWorkflowWithCheck({
     const modalOpened = await openEnhancementModal(workflowId, image, step);
     if (modalOpened) return;
   }
+
+  // Close the lightbox if we're in the lightbox context (enhancement modals stay on top)
+  if (isLightbox) dialogStore.closeById('generated-image');
 
   const isCrossMedia = isCrossMediaWorkflow(image, workflowId);
   const isStandalone = (workflowConfigByKey.get(workflowId)?.ecosystemIds.length ?? 0) === 0;

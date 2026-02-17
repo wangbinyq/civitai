@@ -26,10 +26,7 @@ import {
 } from '~/components/Generation/Input/SourceImageUploadMultiple';
 import type { DrawingElement } from '~/components/Generation/Input/DrawingEditor/drawing.types';
 import type { SourceImageProps } from '~/server/orchestrator/infrastructure/base.schema';
-import {
-  useSourceMetadataStore,
-  sourceMetadataStore,
-} from '~/store/source-metadata.store';
+import { useSourceMetadataStore, sourceMetadataStore } from '~/store/source-metadata.store';
 
 // =============================================================================
 // Types
@@ -63,6 +60,12 @@ export interface ImageUploadMultipleInputProps
   disabled?: boolean;
   /** Enable drawing overlay tools on images (for img2img:edit workflows) */
   enableDrawing?: boolean;
+  /** Layout variant: 'default' (standard dropzone) or 'url-input' (text input + Choose button inside dropzone) */
+  layout?: 'default' | 'url-input';
+  /** Placeholder for URL text input (only used when layout='url-input') */
+  urlPlaceholder?: string;
+  /** Hint text below URL input (only used when layout='url-input') */
+  urlHint?: string;
 }
 
 // Re-export ImageSlot for convenience
@@ -87,9 +90,13 @@ export function ImageUploadMultipleInput({
   required,
   disabled,
   enableDrawing = false,
+  layout = 'default',
+  urlPlaceholder,
+  urlHint,
   ...inputWrapperProps
 }: ImageUploadMultipleInputProps) {
   const isSlotsMode = !!slots?.length;
+  const isUrlInputLayout = layout === 'url-input' && !isSlotsMode;
 
   // Build annotations array from the store for the current images
   const metadataByUrl = useSourceMetadataStore((state) => state.metadataByUrl);
@@ -172,6 +179,64 @@ export function ImageUploadMultipleInput({
     );
   }
 
+  // URL-input layout: text input + Choose button inside dropzone + image previews
+  if (isUrlInputLayout) {
+    return (
+      <Input.Wrapper
+        {...inputWrapperProps}
+        label={label}
+        description={description}
+        error={error}
+        required={required}
+      >
+        <SourceImageUploadMultiple
+          value={value as SourceImageProps[] | null | undefined}
+          onChange={(v) => onChange?.(v ?? [])}
+          max={max}
+          aspect={aspect}
+          warnOnMissingAiMetadata={warnOnMissingAiMetadata}
+          aspectRatios={aspectRatios}
+          cropToFirstImage={cropToFirstImage}
+          disabled={disabled}
+        >
+          {(previewItems) => {
+            const hasImages = previewItems.length > 0;
+            const canAddMore = previewItems.length < max;
+
+            return (
+              <div className="flex flex-col gap-3">
+                {canAddMore && (
+                  <SourceImageUploadMultiple.UrlDropzone
+                    placeholder={urlPlaceholder}
+                    hint={urlHint}
+                  />
+                )}
+
+                {/* Horizontal scrolling image strip */}
+                {hasImages && (
+                  <div className="flex gap-3 overflow-x-auto">
+                    {previewItems.map((item, i) => (
+                      <div key={i} className="w-[200px] shrink-0">
+                        <SourceImageUploadMultiple.Image index={i} {...item} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!canAddMore && max > 1 && (
+                  <Text size="xs" c="dimmed">
+                    {previewItems.filter((item) => item.status === 'complete').length} of {max}{' '}
+                    images (limit reached)
+                  </Text>
+                )}
+              </div>
+            );
+          }}
+        </SourceImageUploadMultiple>
+      </Input.Wrapper>
+    );
+  }
+
   // Compact layout for both single and multiple image modes
   return (
     <Input.Wrapper
@@ -223,7 +288,7 @@ export function ImageUploadMultipleInput({
               {hasImages && (
                 <div className="flex gap-3 overflow-x-auto">
                   {previewItems.map((item, i) => (
-                    <div key={i} className="w-[140px] shrink-0">
+                    <div key={i} className="w-[200px] shrink-0">
                       <SourceImageUploadMultiple.Image index={i} {...item} />
                     </div>
                   ))}

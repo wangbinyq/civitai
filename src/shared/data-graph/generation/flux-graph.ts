@@ -123,8 +123,8 @@ const standardModeBaseGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
     })
   )
   .node('steps', stepsNode({ min: 20, max: 50 }))
-  .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode());
+  .node('seed', seedNode());
+// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 /**
  * Pro mode subgraph: aspectRatio, cfgScale, steps, seed (no resources, no enhancedCompatibility)
@@ -161,8 +161,8 @@ const standardModeWithResourcesGraph = new DataGraph<FluxModeCtx, GenerationCtx>
 /** Draft mode subgraph: aspectRatio, seed, enhancedCompatibility */
 const draftModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
-  .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode());
+  .node('seed', seedNode());
+// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 /** Ultra mode subgraph: aspectRatio (different options), fluxUltraRaw, seed */
 const ultraModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()

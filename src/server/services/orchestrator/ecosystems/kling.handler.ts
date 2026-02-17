@@ -2,10 +2,13 @@
  * Kling Ecosystem Handler
  *
  * Handles Kling video generation workflows using videoGen step type.
- * Supports txt2vid and img2vid workflows with multiple model versions.
+ * Supports legacy (V1.6/V2/V2.5) and V3 workflows.
+ *
+ * Legacy versions use engine 'kling' with model version mapping.
+ * V3 uses engine 'kling-v3' with operation-based inputs.
  */
 
-import type { KlingVideoGenInput } from '@civitai/client';
+import type { KlingVideoGenInput, KlingV3VideoGenInput } from '@civitai/client';
 import { removeEmpty } from '~/utils/object-helpers';
 import type { GenerationGraphTypes } from '~/shared/data-graph/generation/generation-graph';
 import { klingVersionIds } from '~/shared/data-graph/generation/kling-graph';
@@ -15,7 +18,7 @@ import { defineHandler } from './handler-factory';
 type EcosystemGraphOutput = Extract<GenerationGraphTypes['Ctx'], { ecosystem: string }>;
 type KlingCtx = EcosystemGraphOutput & { ecosystem: 'Kling' };
 
-// Map from version ID to model version string
+// Map from version ID to model version string (legacy versions)
 type KlingModel = 'v1_6' | 'v2' | 'v2_5_turbo';
 const versionIdToModel = new Map<number, KlingModel>([
   [klingVersionIds.v1_6, 'v1_6'],
@@ -25,9 +28,20 @@ const versionIdToModel = new Map<number, KlingModel>([
 
 /**
  * Creates videoGen input for Kling ecosystem.
- * Supports txt2vid and img2vid with model versions, modes, and duration options.
+ * Routes to legacy or V3 handler based on klingVersion discriminator.
  */
-export const createKlingInput = defineHandler<KlingCtx, KlingVideoGenInput>((data, ctx) => {
+export const createKlingInput = defineHandler<KlingCtx, KlingVideoGenInput | KlingV3VideoGenInput>(
+  (data, ctx) => {
+    // Route V3 to its own handler
+    if ('klingVersion' in data && data.klingVersion === 'v3') {
+      return createV3Input(data);
+    }
+    return createLegacyInput(data);
+  }
+);
+
+/** Legacy handler for V1.6, V2, V2.5 Turbo */
+function createLegacyInput(data: KlingCtx): KlingVideoGenInput {
   const hasImages = !!data.images?.length;
 
   // Determine model version
@@ -51,4 +65,42 @@ export const createKlingInput = defineHandler<KlingCtx, KlingVideoGenInput>((dat
     seed: data.seed,
     enablePromptEnhancer: 'enablePromptEnhancer' in data ? data.enablePromptEnhancer : undefined,
   }) as KlingVideoGenInput;
-});
+}
+
+/** V3 handler using kling-v3 engine with operation-based inputs */
+function createV3Input(data: KlingCtx): KlingV3VideoGenInput {
+  const hasImages = !!data.images?.length;
+  const isRef2Vid = 'operation' in data && data.operation === 'reference-to-video';
+
+  return removeEmpty({
+    engine: 'kling-v3' as const,
+    prompt: data.prompt,
+    operation: 'operation' in data ? data.operation : undefined,
+    mode: 'mode' in data ? data.mode : undefined,
+    duration: 'duration' in data ? Number(data.duration) : undefined,
+    aspectRatio: data.aspectRatio?.value as KlingV3VideoGenInput['aspectRatio'],
+    // ref2vid sends images as an array; img2vid uses sourceImage/endImage slots
+    sourceImage: !isRef2Vid && hasImages ? data.images?.[0]?.url : undefined,
+    endImage: !isRef2Vid && hasImages && data.images?.[1]?.url ? data.images[1].url : undefined,
+    images: isRef2Vid && hasImages ? data.images?.map((img) => img.url) : undefined,
+    elements:
+      'elements' in data
+        ? (
+            data.elements as Array<{
+              frontalImage?: { url: string } | null;
+              referenceImages?: Array<{ url: string }>;
+              videoUrl?: { url: string } | null;
+            }>
+          )?.map((el) => ({
+            frontalImage: el.frontalImage?.url ?? null,
+            referenceImages: el.referenceImages?.map((img) => img.url),
+            videoUrl: el.videoUrl?.url ?? null,
+          }))
+        : undefined,
+    generateAudio: 'generateAudio' in data ? data.generateAudio : undefined,
+    keepAudio: 'keepAudio' in data ? data.keepAudio : undefined,
+    multiPrompt: 'multiPrompt' in data ? data.multiPrompt : undefined,
+    quantity: data.quantity ?? 1,
+    seed: data.seed,
+  }) as KlingV3VideoGenInput;
+}

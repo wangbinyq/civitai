@@ -12,18 +12,21 @@
 import {
   ActionIcon,
   Alert,
+  Button,
   Card,
   Input,
   Loader,
   Text,
+  TextInput,
   useComputedColorScheme,
   useMantineTheme,
 } from '@mantine/core';
 import type { InputWrapperProps } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 import { IconUpload, IconVideo, IconX } from '@tabler/icons-react';
+import clsx from 'clsx';
 import type { DragEvent } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { EdgeVideo } from '~/components/EdgeMedia/EdgeVideo';
 import { isOrchestratorUrl, maxVideoFileSize } from '~/server/common/constants';
 import { VIDEO_MIME_TYPE } from '~/shared/constants/mime-types';
@@ -57,6 +60,12 @@ export interface VideoInputProps extends Omit<InputWrapperProps, 'children' | 'o
   maxHeight?: number;
   /** Whether the input is disabled */
   disabled?: boolean;
+  /** Layout variant: 'default' (standard dropzone) or 'url-input' (text input + Choose button inside dropzone) */
+  layout?: 'default' | 'url-input';
+  /** Placeholder for URL text input (only used when layout='url-input') */
+  urlPlaceholder?: string;
+  /** Hint text below URL input (only used when layout='url-input') */
+  urlHint?: string;
 }
 
 // =============================================================================
@@ -73,6 +82,9 @@ export function VideoInput({
   error,
   required,
   disabled,
+  layout = 'default',
+  urlPlaceholder = 'Drop a video or provide a URL',
+  urlHint,
   ...inputWrapperProps
 }: VideoInputProps) {
   const theme = useMantineTheme();
@@ -85,6 +97,9 @@ export function VideoInput({
     width: number;
     height: number;
   }>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [urlValue, setUrlValue] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Check if video is from orchestrator (uploaded successfully)
   const isFromOrchestrator = videoUrl ? isOrchestratorUrl(videoUrl) : false;
@@ -193,10 +208,69 @@ export function VideoInput({
 
   // Handle video load error
   const handleVideoError = useCallback(() => {
-    setVideoLoadError('Failed to load video. The video may be unavailable or in an unsupported format.');
+    setVideoLoadError(
+      'Failed to load video. The video may be unavailable or in an unsupported format.'
+    );
   }, []);
 
+  // URL-input layout handlers
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) handleDrop(files);
+    e.target.value = '';
+  }
+
+  function submitUrl(url: string) {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    setUploadError(null);
+    setUrlValue('');
+    onChange?.({ url: trimmed, metadata: undefined });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitUrl(urlValue);
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const pasted = e.clipboardData.getData('text/plain').trim();
+    if (pasted.startsWith('http://') || pasted.startsWith('https://')) {
+      e.preventDefault();
+      submitUrl(pasted);
+    }
+  }
+
+  function handleNativeDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    if (!disabled && !isUploading) setIsDragOver(true);
+  }
+
+  function handleNativeDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(false);
+  }
+
+  async function handleNativeDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (disabled || isUploading) return;
+
+    const url = e.dataTransfer.getData('text/uri-list');
+    if (url?.length) {
+      setUploadError(null);
+      onChange?.({ url, metadata: undefined });
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) await handleDrop(files);
+  }
+
   const isLoading = isUploading;
+  const isUrlInputLayout = layout === 'url-input';
 
   return (
     <Input.Wrapper
@@ -207,60 +281,109 @@ export function VideoInput({
       required={required}
     >
       {!videoUrl ? (
-        // Dropzone when no video is selected
-        <Dropzone
-          onDrop={handleDrop}
-          onDropCapture={async (e: DragEvent) => {
-            const url = e.dataTransfer.getData('text/uri-list');
-            if (url?.length) {
-              setUploadError(null);
-              onChange?.({ url, metadata: undefined });
-            }
-          }}
-          accept={VIDEO_MIME_TYPE}
-          maxFiles={1}
-          disabled={disabled || isUploading}
-          className="cursor-pointer"
-        >
-          <div className="flex flex-col items-center justify-center gap-2 py-8">
-            {isUploading ? (
-              // Show uploading state
-              <>
-                <Loader size={50} />
-                <Text size="sm" c="dimmed" ta="center">
-                  Uploading video...
-                </Text>
-              </>
-            ) : (
-              // Show normal dropzone states
-              <>
-                <Dropzone.Accept>
-                  <IconUpload
-                    size={50}
-                    stroke={1.5}
-                    color={theme.colors[theme.primaryColor][colorScheme === 'dark' ? 4 : 6]}
-                  />
-                </Dropzone.Accept>
-                <Dropzone.Reject>
-                  <IconX
-                    size={50}
-                    stroke={1.5}
-                    color={theme.colors.red[colorScheme === 'dark' ? 4 : 6]}
-                  />
-                </Dropzone.Reject>
-                <Dropzone.Idle>
-                  <IconVideo size={50} stroke={1.5} />
-                </Dropzone.Idle>
-                <Text size="sm" c="dimmed" ta="center">
-                  Drag a video here or click to select
-                </Text>
-                <Text size="xs" c="dimmed">
-                  MP4, WebM, MOV supported (max {formatBytes(maxVideoFileSize)})
-                </Text>
-              </>
+        isUrlInputLayout ? (
+          // URL-input layout: text input + Choose button inside dashed drop target
+          <div
+            onDragOver={handleNativeDragOver}
+            onDragLeave={handleNativeDragLeave}
+            onDrop={handleNativeDrop}
+            className={clsx(
+              'rounded-md border border-dashed p-3',
+              isDragOver
+                ? 'border-blue-5 bg-blue-0 dark:border-blue-7 dark:bg-blue-9/20'
+                : 'border-gray-4 dark:border-dark-4'
             )}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept={VIDEO_MIME_TYPE.join(',')}
+              onChange={handleFileInputChange}
+            />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <TextInput
+                  className="flex-1"
+                  placeholder={urlPlaceholder}
+                  value={urlValue}
+                  onChange={(e) => setUrlValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  size="xs"
+                  disabled={disabled || isUploading}
+                  rightSection={isUploading ? <Loader size={14} /> : undefined}
+                />
+                <Button
+                  variant="default"
+                  size="xs"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={disabled || isUploading}
+                >
+                  Choose...
+                </Button>
+              </div>
+              {urlHint && (
+                <Text size="xs" c="dimmed">
+                  {urlHint}
+                </Text>
+              )}
+            </div>
           </div>
-        </Dropzone>
+        ) : (
+          // Default layout: Mantine Dropzone with icon + text
+          <Dropzone
+            onDrop={handleDrop}
+            onDropCapture={async (e: DragEvent) => {
+              const url = e.dataTransfer.getData('text/uri-list');
+              if (url?.length) {
+                setUploadError(null);
+                onChange?.({ url, metadata: undefined });
+              }
+            }}
+            accept={VIDEO_MIME_TYPE}
+            maxFiles={1}
+            disabled={disabled || isUploading}
+            className="cursor-pointer"
+          >
+            <div className="flex flex-col items-center justify-center gap-2 py-8">
+              {isUploading ? (
+                <>
+                  <Loader size={50} />
+                  <Text size="sm" c="dimmed" ta="center">
+                    Uploading video...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Dropzone.Accept>
+                    <IconUpload
+                      size={50}
+                      stroke={1.5}
+                      color={theme.colors[theme.primaryColor][colorScheme === 'dark' ? 4 : 6]}
+                    />
+                  </Dropzone.Accept>
+                  <Dropzone.Reject>
+                    <IconX
+                      size={50}
+                      stroke={1.5}
+                      color={theme.colors.red[colorScheme === 'dark' ? 4 : 6]}
+                    />
+                  </Dropzone.Reject>
+                  <Dropzone.Idle>
+                    <IconVideo size={50} stroke={1.5} />
+                  </Dropzone.Idle>
+                  <Text size="sm" c="dimmed" ta="center">
+                    Drag a video here or click to select
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    MP4, WebM, MOV supported (max {formatBytes(maxVideoFileSize)})
+                  </Text>
+                </>
+              )}
+            </div>
+          </Dropzone>
+        )
       ) : (
         // Video preview when a video is selected
         <Card withBorder padding={0} className="relative overflow-hidden">
@@ -323,7 +446,9 @@ export function VideoInput({
       {/* Error states */}
       {(metadataError || uploadError || videoLoadError) && (
         <Alert color="red" className="mt-2">
-          {uploadError ?? videoLoadError ?? `Failed to load video metadata: ${metadataError?.message}`}
+          {uploadError ??
+            videoLoadError ??
+            `Failed to load video metadata: ${metadataError?.message}`}
         </Alert>
       )}
     </Input.Wrapper>

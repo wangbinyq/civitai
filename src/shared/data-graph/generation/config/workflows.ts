@@ -225,7 +225,7 @@ export const workflowConfigs: WorkflowConfigs = {
       {
         label: 'First/Last Frame',
         description: 'Create video from start and end images',
-        ecosystemIds: [ECO.Vidu],
+        ecosystemIds: [ECO.Vidu, ECO.Kling],
       },
     ],
   },

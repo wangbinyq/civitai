@@ -49,6 +49,7 @@ import { WORKFLOW_TAGS } from '~/shared/constants/generation.constants';
 import { includesPoi } from '~/utils/metadata/audit';
 import { ecosystemByKey, getEcosystemName } from '~/shared/constants/basemodel.constants';
 import { toStepMetadata } from '~/shared/utils/resource.utils';
+import { auditPromptServer } from '~/server/services/orchestrator/promptAuditing';
 
 // Ecosystem handlers - unified router
 import { createEcosystemStepInput } from './ecosystems';
@@ -93,6 +94,7 @@ export type WhatIfOptions = {
   input: Record<string, unknown>;
   externalCtx: GenerationCtx;
   userId?: number;
+  isModerator?: boolean;
   token: string;
   currencies?: BuzzSpendType[];
 };
@@ -647,6 +649,7 @@ export async function generateFromGraph({
   userId,
   isModerator,
   experimental,
+  isGreen,
   allowMatureContent,
   currencies,
   civitaiTip,
@@ -654,8 +657,23 @@ export async function generateFromGraph({
   tags: customTags = [],
   sourceMetadata,
   remixOfId,
+  track,
 }: GenerateOptions) {
   const data = validateInput(input, externalCtx);
+
+  // Audit prompt before generation
+  if ('prompt' in data && typeof data.prompt === 'string' && data.prompt.trim()) {
+    const negativePrompt = 'negativePrompt' in data ? (data.negativePrompt as string) : undefined;
+    await auditPromptServer({
+      prompt: data.prompt,
+      negativePrompt,
+      userId,
+      isGreen: !!isGreen,
+      isModerator,
+      track,
+    });
+  }
+
   const step = await createWorkflowStepFromGraph({
     data,
     user: { id: userId, isModerator },
@@ -744,6 +762,7 @@ export async function whatIfFromGraph({
   input,
   externalCtx,
   userId,
+  isModerator,
   token,
   currencies,
 }: WhatIfOptions) {
@@ -751,7 +770,7 @@ export async function whatIfFromGraph({
   const step = await createWorkflowStepFromGraph({
     data,
     isWhatIf: true,
-    user: userId ? { id: userId } : undefined,
+    user: userId ? { id: userId, isModerator } : undefined,
   });
 
   // Submit what-if request to orchestrator

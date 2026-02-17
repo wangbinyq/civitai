@@ -7,7 +7,11 @@
  */
 
 import { useMemo } from 'react';
-import { ecosystemByKey, ecosystemById } from '~/shared/constants/basemodel.constants';
+import {
+  ecosystemByKey,
+  ecosystemById,
+  getBaseModelsByEcosystemId,
+} from '~/shared/constants/basemodel.constants';
 import {
   isWorkflowAvailable,
   workflowOptions,
@@ -170,8 +174,17 @@ export function useCompatibilityInfo({
         }
       }
 
-      // Fall back to the first compatible workflow, or txt2img as last resort
-      const fallback = compatibleWorkflows[0] ?? workflowOptions.find((w) => w.id === 'txt2img');
+      // Fall back to the first compatible workflow, or a default based on ecosystem's media type
+      if (compatibleWorkflows[0]) {
+        return { id: compatibleWorkflows[0].id, label: compatibleWorkflows[0].label };
+      }
+
+      // Ecosystem has no compatible workflows — determine fallback from its base model type
+      const targetEco = targetEcosystemKey ? ecosystemByKey.get(targetEcosystemKey) : undefined;
+      const isVideoEcosystem =
+        targetEco && getBaseModelsByEcosystemId(targetEco.id).some((m) => m.type === 'video');
+      const fallbackId = isVideoEcosystem ? 'txt2vid' : 'txt2img';
+      const fallback = workflowOptions.find((w) => w.id === fallbackId);
       return {
         id: fallback?.id ?? 'txt2img',
         label: fallback?.label ?? 'Create Image',

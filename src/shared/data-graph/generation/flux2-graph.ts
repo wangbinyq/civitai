@@ -105,8 +105,8 @@ const baseModeGraph = new DataGraph<Flux2ModeCtx, GenerationCtx>()
     })
   )
   .node('steps', stepsNode({ min: 20, max: 50 }))
-  .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode());
+  .node('seed', seedNode());
+// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 /**
  * Dev mode subgraph: resources + base controls

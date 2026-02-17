@@ -516,8 +516,17 @@ export async function getResourceData(
       item.availability === 'Private' || ['Draft', 'Training'].includes(item.status);
 
     // canGenerate is the definitive "can this user use this resource" flag
-    // Requires: covered by orchestrator AND valid status AND (not private OR user owns it)
-    const canGenerate = covered && hasValidStatus && (!isPrivate || isOwnedByUser);
+    // Requires: covered by orchestrator AND valid status AND (not private OR user owns it OR moderator)
+    let canGenerate = !!(
+      covered &&
+      hasValidStatus &&
+      (!isPrivate || isOwnedByUser || user.isModerator)
+    );
+
+    // InternalGeneration models are restricted to moderators (consistent with mini endpoint)
+    if (item.usageControl === 'InternalGeneration' && !user.isModerator) {
+      canGenerate = false;
+    }
 
     if (!canGenerate) {
       // Delete these items so that the client doesn't have to notify users about these props. They are irrelevant if the resource cannot be used for generation.

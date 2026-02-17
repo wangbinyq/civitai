@@ -9,7 +9,7 @@
 import { Alert, Button, Card, Notification, NumberInput, Text } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconAlertTriangle, IconCheck, IconX } from '@tabler/icons-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { AlertWithIcon } from '~/components/AlertWithIcon/AlertWithIcon';
 import {
@@ -241,6 +241,8 @@ export function FormFooter({ onSubmitSuccess }: { onSubmitSuccess?: () => void }
   const missingFieldMessage = !canEstimateCost ? getMissingFieldMessage(validationErrors) : null;
 
   const [submitError, setSubmitError] = useState<string | undefined>();
+  const [isMinLoading, setIsMinLoading] = useState(false);
+  const minLoadingTimer = useRef<ReturnType<typeof setTimeout>>();
   const [promptWarning, setPromptWarning] = useState<string | null>(null);
   const [reviewed, setReviewed] = useLocalStorage({
     key: 'review-generation-terms',
@@ -290,6 +292,11 @@ export function FormFooter({ onSubmitSuccess }: { onSubmitSuccess?: () => void }
 
     setSubmitError(undefined);
     setPromptWarning(null);
+
+    // Ensure loading state shows for at least 1 second
+    clearTimeout(minLoadingTimer.current);
+    setIsMinLoading(true);
+    minLoadingTimer.current = setTimeout(() => setIsMinLoading(false), 1000);
 
     // Filter out computed nodes and disabled resources
     const inputData = filterSnapshotForSubmit(result.data as Record<string, unknown>, {
@@ -474,19 +481,23 @@ export function FormFooter({ onSubmitSuccess }: { onSubmitSuccess?: () => void }
                     step={meta.step}
                     size="md"
                     variant="unstyled"
+                    style={{ marginTop: -16 }}
                     styles={{
                       input: {
                         textAlign: 'center',
-                        fontWeight: 700,
-                        fontSize: 20,
-                        padding: 0,
+                        fontWeight: 500,
+                        paddingRight: 27,
+                        lineHeight: 1,
+                        paddingTop: 22,
+                        paddingBottom: 6,
+                        height: 'auto',
                       },
                     }}
                   />
                 </Card>
               )}
             />
-            <SubmitButton isLoading={generateMutation.isLoading} onSubmit={handleSubmit} />
+            <SubmitButton isLoading={generateMutation.isLoading || isMinLoading} onSubmit={handleSubmit} />
             <Button onClick={handleReset} variant="default" className="h-auto px-3">
               Reset
             </Button>

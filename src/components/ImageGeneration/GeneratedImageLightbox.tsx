@@ -3,7 +3,6 @@ import { useHotkeys } from '@mantine/hooks';
 import type { EmblaCarouselType } from 'embla-carousel';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { getBrowserRouter } from '~/components/BrowserRouter/BrowserRouterProvider';
 import { useDialogContext } from '~/components/Dialog/DialogProvider';
 import { Embla } from '~/components/EmblaCarousel/EmblaCarousel';
 import { GenerationDetails } from '~/components/ImageGeneration/GenerationDetails';
@@ -67,10 +66,6 @@ export default function GeneratedImageLightbox({
     const image = images[index];
     if (image) {
       currentImageIdRef.current = image.id;
-      const browserRouter = getBrowserRouter();
-      browserRouter.replace({
-        query: { ...browserRouter.query, imageId: image.id, workflowId: image.workflow.id },
-      });
     }
   };
 
@@ -97,7 +92,7 @@ export default function GeneratedImageLightbox({
         inner: { position: 'absolute' },
         content: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
         header: { position: 'absolute', right: 0, zIndex: 10 },
-        body: { flex: 1, minHeight: 0, overflow: 'hidden' },
+        body: { flex: 1, minHeight: 0, overflow: 'hidden', padding: 16 },
       }}
     >
       <IntersectionObserverProvider id="generated-image-lightbox">

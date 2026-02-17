@@ -1124,8 +1124,15 @@ export type VideoValue = {
   metadata?: VideoMetadata;
 };
 
+/** Zod schema for image value (url + dimensions) */
+export const imageValueSchema = z.object({
+  url: z.string(),
+  width: z.number(),
+  height: z.number(),
+});
+
 /** Zod schema for video metadata */
-const videoMetadataSchema = z.object({
+export const videoMetadataSchema = z.object({
   fps: z.number(),
   width: z.number(),
   height: z.number(),
@@ -1133,7 +1140,7 @@ const videoMetadataSchema = z.object({
 });
 
 /** Zod schema for video value */
-const videoValueSchema = z.object({
+export const videoValueSchema = z.object({
   url: z.string(),
   metadata: videoMetadataSchema.optional(),
 });

@@ -162,6 +162,7 @@ export const veo3GenerationConfig = VideoGenerationConfig2({
     const fastMode = mode === 'fast';
     return {
       ...args,
+      duration: args.duration as Veo3VideoGenInput['duration'],
       fastMode,
       images: images?.map((x) => x.url),
     };

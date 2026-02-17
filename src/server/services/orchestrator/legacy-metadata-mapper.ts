@@ -555,7 +555,7 @@ export function mapDataToGraphInput(
   const isVideoWorkflow =
     typeof workflow === 'string' &&
     ['txt2vid', 'img2vid', 'vid2vid'].some((prefix) => workflow.startsWith(prefix));
-  const videoDraft = isVideoWorkflow ? (_draft ?? _turbo ?? undefined) : undefined;
+  const videoDraft = isVideoWorkflow ? _draft ?? _turbo ?? undefined : undefined;
 
   return removeEmpty({
     ...rest,

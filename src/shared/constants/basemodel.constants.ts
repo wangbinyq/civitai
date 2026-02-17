@@ -1005,6 +1005,7 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.Seedream,
     defaults: {
       model: { id: 2208278 },
+      modelLocked: true,
     },
   },
   {

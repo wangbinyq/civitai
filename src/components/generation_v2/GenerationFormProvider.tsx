@@ -14,15 +14,24 @@ import { generationGraph, type GenerationCtx } from '~/shared/data-graph/generat
 import type { ResourceData } from '~/shared/data-graph/generation/common';
 import {
   ecosystemByKey,
+  ecosystemById,
   getGenerationSupport,
+  getBaseModelsByEcosystemId,
   ecosystemGroups,
   getEcosystemGroup,
 } from '~/shared/constants/basemodel.constants';
+import {
+  workflowConfigByKey,
+  isWorkflowAvailable,
+  getEcosystemsForWorkflow,
+  getOutputTypeForWorkflow,
+} from '~/shared/data-graph/generation/config/workflows';
 import type { ModelType } from '~/shared/utils/prisma/enums';
 import { splitResourcesByType } from '~/shared/utils/resource.utils';
 import { useGenerationGraphStore, generationGraphStore } from '~/store/generation-graph.store';
 import { workflowPreferences } from '~/store/workflow-preferences.store';
 
+import { openCompatibilityConfirmModal } from './CompatibilityConfirmModal';
 import { ResourceDataProvider, useResourceDataContext } from './inputs/ResourceDataProvider';
 import { WhatIfProvider } from './WhatIfProvider';
 import { needsHydration, type PartialResourceValue } from './inputs/resource-select.utils';
@@ -154,20 +163,67 @@ function InnerProvider({
       const split = splitResourcesByType(data.resources);
 
       if (data.runType === 'remix' || data.runType === 'replay') {
-        // Full override: reset graph (excluding output settings), then apply all values
-        // Exclude output settings from reset to preserve user's current preferences
-        graph.reset({ exclude: ['quantity', 'priority', 'outputFormat'] });
-
         // Exclude output settings from remixed params so they don't override current values
         const { quantity, priority, outputFormat, ...paramsWithoutOutputSettings } = data.params;
-        const values = {
+
+        // Resolve workflow — if missing or unrecognized, derive from ecosystem's base model type
+        const remixEcosystemKey = paramsWithoutOutputSettings.ecosystem as string | undefined;
+        let resolvedWorkflow = paramsWithoutOutputSettings.workflow as string | undefined;
+        if (!resolvedWorkflow || !workflowConfigByKey.has(resolvedWorkflow)) {
+          // Workflow unknown — check the ecosystem's base model type to pick the right default
+          const remixEcoEntry = remixEcosystemKey
+            ? ecosystemByKey.get(remixEcosystemKey)
+            : undefined;
+          const isVideoEco =
+            remixEcoEntry &&
+            getBaseModelsByEcosystemId(remixEcoEntry.id).some((m) => m.type === 'video');
+          resolvedWorkflow = isVideoEco ? 'txt2vid' : 'txt2img';
+        }
+
+        // Check if the remix ecosystem supports the resolved workflow
+        const remixEco = remixEcosystemKey ? ecosystemByKey.get(remixEcosystemKey) : undefined;
+        const ecosystemSupportsWorkflow = remixEco
+          ? isWorkflowAvailable(resolvedWorkflow, remixEco.id)
+          : true;
+
+        // Build the values to apply (shared between both paths)
+        const remixValues = {
           ...paramsWithoutOutputSettings,
+          workflow: resolvedWorkflow,
           model: split.model,
           resources: split.resources,
           vae: split.vae,
         };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose superset of discriminated union
-        graph.set(values as any);
+
+        if (!ecosystemSupportsWorkflow && remixEco) {
+          // Ecosystem doesn't support this workflow — show modal before applying
+          const compatibleIds = getEcosystemsForWorkflow(resolvedWorkflow);
+          const defaultEcoId = compatibleIds[0];
+          const defaultEco = defaultEcoId ? ecosystemById.get(defaultEcoId) : undefined;
+
+          openCompatibilityConfirmModal({
+            pendingChange: {
+              type: 'workflow',
+              value: resolvedWorkflow,
+              optionId: resolvedWorkflow,
+              currentEcosystem: remixEcosystemKey!,
+              compatibleEcosystemIds: compatibleIds,
+              defaultEcosystemKey: defaultEco?.key ?? '',
+            },
+            onConfirm: (selectedEcosystemKey) => {
+              if (selectedEcosystemKey) {
+                graph.reset({ exclude: ['quantity', 'priority', 'outputFormat'] });
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                graph.set({ ...remixValues, ecosystem: selectedEcosystemKey } as any);
+              }
+            },
+          });
+        } else {
+          // Compatible — apply immediately
+          graph.reset({ exclude: ['quantity', 'priority', 'outputFormat'] });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose superset of discriminated union
+          graph.set(remixValues as any);
+        }
       } else {
         // Run/Patch: model/vae overwrite, resources merge with existing
         const snapshot = graph.getSnapshot() as Record<string, unknown>;

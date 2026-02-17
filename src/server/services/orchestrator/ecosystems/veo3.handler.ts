@@ -9,7 +9,8 @@ import type { Veo3VideoGenInput } from '@civitai/client';
 import { removeEmpty } from '~/utils/object-helpers';
 import type { GenerationGraphTypes } from '~/shared/data-graph/generation/generation-graph';
 import type { ResourceData } from '~/shared/data-graph/generation/common';
-import { veo3VersionIds } from '~/shared/data-graph/generation/veo3-graph';
+import { veo3AspectRatios, veo3VersionIds } from '~/shared/data-graph/generation/veo3-graph';
+import { findClosestAspectRatio } from '~/utils/aspect-ratio-helpers';
 import { defineHandler } from './handler-factory';
 
 // Types derived from generation graph
@@ -24,6 +25,14 @@ const versionIdToMode = new Map<number, Veo3Mode>([
   [veo3VersionIds.img2vid_fast, 'fast'],
   [veo3VersionIds.img2vid_standard, 'standard'],
 ]);
+
+/** Derive aspect ratio from the first source image's dimensions */
+function getImageAspectRatio(images: { width: number; height: number }[] | undefined) {
+  const img = images?.[0];
+  if (!img?.width || !img?.height) return undefined;
+  return findClosestAspectRatio({ width: img.width, height: img.height }, [...veo3AspectRatios])
+    .value;
+}
 
 /**
  * Creates videoGen input for Veo3 ecosystem.
@@ -64,10 +73,11 @@ export const createVeo3Input = defineHandler<Veo3Ctx, Veo3VideoGenInput>((data, 
 
   return removeEmpty({
     engine: 'veo3',
-    mode,
+    fastMode: mode === 'fast',
     prompt,
     negativePrompt: 'negativePrompt' in data ? data.negativePrompt : undefined,
-    aspectRatio: data.aspectRatio?.value as Veo3VideoGenInput['aspectRatio'],
+    aspectRatio: (data.aspectRatio?.value ??
+      getImageAspectRatio(images)) as Veo3VideoGenInput['aspectRatio'],
     duration: 'duration' in data ? data.duration : undefined,
     version: 'version' in data ? data.version : undefined,
     generateAudio: 'generateAudio' in data ? data.generateAudio : undefined,

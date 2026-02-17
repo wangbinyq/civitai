@@ -1,5 +1,7 @@
 import {
   Alert,
+  Button,
+  TextInput,
   useMantineTheme,
   useComputedColorScheme,
   Text,
@@ -9,7 +11,7 @@ import {
   Loader,
 } from '@mantine/core';
 import type { Dispatch, DragEvent, SetStateAction } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   isOrchestratorUrl,
   maxOrchestratorImageFileSize,
@@ -866,6 +868,156 @@ SourceImageUploadMultiple.Dropzone = function ImageDropzone({
         </div>
       )}
     </Dropzone>
+  );
+};
+
+/**
+ * URL-input variant of the dropzone. Renders a text input + "Choose..." button
+ * inside a dashed-border drop target. Supports file drops, URL drags, URL paste,
+ * and Enter key submission. Uses the same upload pipeline as the standard Dropzone.
+ *
+ * Uses native HTML5 drag/drop + hidden file input instead of Mantine Dropzone
+ * because Dropzone's inner wrapper sets pointer-events:none which blocks
+ * interaction with the TextInput.
+ */
+SourceImageUploadMultiple.UrlDropzone = function UrlDropzone({
+  className,
+  placeholder = 'Add a file or provide a URL',
+  hint,
+  size = 'xs',
+}: {
+  className?: string;
+  placeholder?: string;
+  hint?: string;
+  size?: 'xs' | 'sm' | 'md';
+}) {
+  const { previewItems, setError, max, onChange, disabled } = useContext();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [urlValue, setUrlValue] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const canAddFiles = previewItems.length < max && !disabled;
+
+  async function handleFiles(files: File[]) {
+    setError(null);
+    const remaining = max - previewItems.length;
+    const toUpload = files
+      .filter((file) => {
+        if (!IMAGE_MIME_TYPE.includes(file.type as (typeof IMAGE_MIME_TYPE)[number])) return false;
+        const tooLarge = file.size > maxOrchestratorImageFileSize;
+        if (tooLarge) setError(`Images should not exceed ${maxSizeFormatted}`);
+        return !tooLarge;
+      })
+      .slice(0, remaining);
+    if (toUpload.length > 0) await onChange(toUpload);
+  }
+
+  function handleNativeDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(true);
+  }
+
+  function handleNativeDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(false);
+  }
+
+  async function handleNativeDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    // Check for URL drops first
+    const url = e.dataTransfer.getData('text/uri-list');
+    if (url?.length) {
+      setError(null);
+      await onChange([url]);
+      return;
+    }
+
+    // File drops
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) await handleFiles(files);
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) handleFiles(files);
+    e.target.value = ''; // Reset so same file can be re-selected
+  }
+
+  function submitUrl(url: string) {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    setError(null);
+    setUrlValue('');
+    onChange([trimmed]);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitUrl(urlValue);
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const pasted = e.clipboardData.getData('text/plain').trim();
+    if (pasted.startsWith('http://') || pasted.startsWith('https://')) {
+      e.preventDefault();
+      submitUrl(pasted);
+    }
+  }
+
+  if (!canAddFiles) return null;
+
+  return (
+    <div
+      onDragOver={handleNativeDragOver}
+      onDragLeave={handleNativeDragLeave}
+      onDrop={handleNativeDrop}
+      className={clsx(
+        'rounded-md border border-dashed p-3',
+        isDragOver
+          ? 'border-blue-5 bg-blue-0 dark:border-blue-7 dark:bg-blue-9/20'
+          : 'border-gray-4 dark:border-dark-4',
+        className
+      )}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept={IMAGE_MIME_TYPE.join(',')}
+        multiple
+        onChange={handleFileInputChange}
+      />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <TextInput
+            className="flex-1"
+            placeholder={placeholder}
+            value={urlValue}
+            onChange={(e) => setUrlValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            size={size}
+            disabled={!canAddFiles}
+          />
+          <Button
+            variant="default"
+            size={size}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!canAddFiles}
+          >
+            Choose...
+          </Button>
+        </div>
+        {hint && (
+          <Text size="xs" c="dimmed">
+            {hint}
+          </Text>
+        )}
+      </div>
+    </div>
   );
 };
 

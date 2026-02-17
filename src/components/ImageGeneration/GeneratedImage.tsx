@@ -11,7 +11,8 @@ import clsx from 'clsx';
 import type { DragEvent, MouseEvent } from 'react';
 import { useState } from 'react';
 
-import { triggerRoutedDialog } from '~/components/Dialog/RoutedDialogLink';
+import dynamic from 'next/dynamic';
+
 import { dialogStore } from '~/components/Dialog/dialogStore';
 import { EdgeMedia2 } from '~/components/EdgeMedia/EdgeMedia';
 import { useGeneratedItemStore } from '~/components/Generation/stores/generated-item.store';
@@ -34,6 +35,12 @@ import { mediaDropzoneData } from '~/store/post-image-transmitter.store';
 
 import { getStepMeta } from './GenerationForm/generation.utils';
 import classes from './GeneratedImage.module.css';
+import GeneratedImageLightbox from '~/components/ImageGeneration/GeneratedImageLightbox'
+
+// const GeneratedImageLightbox = dynamic(
+//   () => import('~/components/ImageGeneration/GeneratedImageLightbox'),
+//   { ssr: false }
+// );
 
 export type GeneratedImageProps = {
   image: NormalizedGeneratedImage;
@@ -77,9 +84,10 @@ export function GeneratedImage({
     if (isSelecting) {
       handleToggleSelect();
     } else {
-      triggerRoutedDialog({
-        name: 'generatedImage',
-        state: { imageId: image.id, workflowId: request.id },
+      dialogStore.trigger({
+        id: 'generated-image',
+        component: GeneratedImageLightbox,
+        props: { imageId: image.id, workflowId: request.id },
       });
     }
   };
@@ -268,7 +276,12 @@ export function GeneratedImage({
                 </div>
               </Menu.Target>
               <Menu.Dropdown>
-                <GeneratedItemWorkflowMenu step={step} image={image} workflowId={request.id} />
+                <GeneratedItemWorkflowMenu
+                  step={step}
+                  image={image}
+                  workflowId={request.id}
+                  isLightbox={isLightbox}
+                />
               </Menu.Dropdown>
             </Menu>
           )}
@@ -372,6 +385,7 @@ function GeneratedImageActions({
             image={image}
             workflowId={workflowId}
             workflowsOnly
+            isLightbox={isLightbox}
           />
         </Menu.Dropdown>
       </Menu>

@@ -827,20 +827,20 @@ function formatWorkflowStepOutput({
             }
           } else {
             // Handle both string ("16:9") and object ({ value, width, height }) formats
-          if (typeof params.aspectRatio === 'object') {
-            width = (params.aspectRatio as any).width;
-            height = (params.aspectRatio as any).height;
-            if (!width || !height) {
-              const arValue = (params.aspectRatio as any).value ?? '1:1';
-              const split = arValue.split(':').map(Number);
+            if (typeof params.aspectRatio === 'object') {
+              width = (params.aspectRatio as any).width;
+              height = (params.aspectRatio as any).height;
+              if (!width || !height) {
+                const arValue = (params.aspectRatio as any).value ?? '1:1';
+                const split = arValue.split(':').map(Number);
+                width = split[0];
+                height = split[1];
+              }
+            } else {
+              const split = params.aspectRatio.split(':').map(Number);
               width = split[0];
               height = split[1];
             }
-          } else {
-            const split = params.aspectRatio.split(':').map(Number);
-              width = split[0];
-              height = split[1];
-          }
           }
         } else {
           const image = params.sourceImage ?? params.images?.[0];

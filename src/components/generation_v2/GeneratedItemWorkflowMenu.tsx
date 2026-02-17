@@ -47,6 +47,7 @@ interface GeneratedItemWorkflowMenuProps {
   step: Omit<NormalizedGeneratedImageStep, 'images'>;
   workflowId: string;
   workflowsOnly?: boolean;
+  isLightbox?: boolean;
 }
 
 // =============================================================================
@@ -58,6 +59,7 @@ export function GeneratedItemWorkflowMenu({
   step,
   workflowId,
   workflowsOnly,
+  isLightbox,
 }: GeneratedItemWorkflowMenuProps) {
   const { updateImages } = useUpdateImageStepMetadata();
   const { copied, copy } = useClipboard();
@@ -189,6 +191,7 @@ export function GeneratedItemWorkflowMenu({
                     image,
                     step,
                     compatible: workflow.compatible,
+                    isLightbox,
                   })
                 }
                 className={!workflow.compatible ? 'opacity-60' : undefined}

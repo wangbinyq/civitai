@@ -186,6 +186,9 @@ export const useGenerationGraphStore = create<GenerationGraphState>()(
         // TEMPORARY: Sync legacy form store (remove with legacy generator)
         syncLegacyFormStore(params);
 
+        if (typeof window !== 'undefined' && !location.pathname.startsWith('/generate'))
+          useGenerationPanelStore.setState({ view: 'generate' });
+
         // Update remix store for similarity tracking
         if ((runType === 'remix' || runType === 'replay') && remixOfId) {
           remixStore.setRemix(remixOfId, params);
