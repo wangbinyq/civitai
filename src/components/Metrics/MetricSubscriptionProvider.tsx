@@ -2,14 +2,14 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useSignalTopic } from '~/components/Signals/SignalsProvider';
 import { SignalTopic } from '~/server/common/enums';
 import type { MetricEntityType } from '~/components/Signals/metric-signals.types';
-import { useFliptFlag } from '~/hooks/useFliptFlag';
-import { FLIPT_FEATURE_FLAGS } from '~/server/flipt/client';
+import { useFeatureFlags } from '~/providers/FeatureFlagsProvider';
 
 /**
- * Hook to check if live metrics feature is enabled via Flipt.
+ * Hook to check if live metrics feature is enabled via feature flags (Flipt-backed).
  */
 export function useLiveMetricsEnabled() {
-  return useFliptFlag(FLIPT_FEATURE_FLAGS.LIVE_METRICS);
+  const { liveMetrics } = useFeatureFlags();
+  return liveMetrics;
 }
 
 interface MetricSubscriptionContextValue {
