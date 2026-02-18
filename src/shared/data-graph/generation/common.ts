@@ -821,8 +821,28 @@ export function createCheckpointGraph(
             versions,
             defaultModelId: modelVersionId,
           }),
-          // Transform model version when workflow changes (if workflowVersions configured)
-          transform: buildModelTransform(),
+          // Transform model when ecosystem or workflow changes
+          transform: (model, ctx) => {
+            const m = model as { id?: number; baseModel?: string } | undefined;
+            // 1. Check ecosystem compatibility — reset model if it belongs to a different ecosystem
+            if (m?.baseModel) {
+              const modelEcosystemKey = getEcosystemKeyForBaseModel(m.baseModel);
+              if (modelEcosystemKey && modelEcosystemKey !== ctx.ecosystem) {
+                // Model doesn't belong to this ecosystem — use ecosystem default
+                return modelVersionId
+                  ? { id: modelVersionId, model: { type: 'Checkpoint' } }
+                  : model;
+              }
+            }
+
+            // 2. Apply workflow version transform if configured (e.g., Flux mode switching)
+            const workflowTransform = buildModelTransform();
+            if (workflowTransform) {
+              return workflowTransform(model, ctx);
+            }
+
+            return model;
+          },
         };
       },
       // Include 'workflow' in deps so transform runs when workflow changes

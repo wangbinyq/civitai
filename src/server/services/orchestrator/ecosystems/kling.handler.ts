@@ -8,7 +8,7 @@
  * V3 uses engine 'kling-v3' with operation-based inputs.
  */
 
-import type { KlingVideoGenInput, KlingV3VideoGenInput } from '@civitai/client';
+import type { KlingVideoGenInput, KlingV3VideoGenInput, KlingModel } from '@civitai/client';
 import { removeEmpty } from '~/utils/object-helpers';
 import type { GenerationGraphTypes } from '~/shared/data-graph/generation/generation-graph';
 import { klingVersionIds } from '~/shared/data-graph/generation/kling-graph';
@@ -19,11 +19,10 @@ type EcosystemGraphOutput = Extract<GenerationGraphTypes['Ctx'], { ecosystem: st
 type KlingCtx = EcosystemGraphOutput & { ecosystem: 'Kling' };
 
 // Map from version ID to model version string (legacy versions)
-type KlingModel = 'v1_6' | 'v2' | 'v2_5_turbo';
 const versionIdToModel = new Map<number, KlingModel>([
-  [klingVersionIds.v1_6, 'v1_6'],
+  [klingVersionIds.v1_6, 'v1.6'],
   [klingVersionIds.v2, 'v2'],
-  [klingVersionIds.v2_5_turbo, 'v2_5_turbo'],
+  [klingVersionIds.v2_5_turbo, 'v2.5-turbo'],
 ]);
 
 /**
@@ -45,7 +44,7 @@ function createLegacyInput(data: KlingCtx): KlingVideoGenInput {
   const hasImages = !!data.images?.length;
 
   // Determine model version
-  let model: KlingModel = 'v1_6';
+  let model: KlingModel = 'v1.6';
   if (data.model) {
     const match = versionIdToModel.get(data.model.id);
     if (match) model = match;

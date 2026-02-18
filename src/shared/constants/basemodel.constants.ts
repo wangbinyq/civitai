@@ -828,36 +828,42 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.Flux1Kontext,
     defaults: {
       model: { id: 1892509 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.Flux2,
     defaults: {
       model: { id: 2439067 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.Flux2Klein_9B,
     defaults: {
       model: { id: 2612554 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.Flux2Klein_9B_base,
     defaults: {
       model: { id: 2612548 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.Flux2Klein_4B,
     defaults: {
       model: { id: 2612557 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.Flux2Klein_4B_base,
     defaults: {
       model: { id: 2612552 },
+      modelLocked: true,
     },
   },
   {
@@ -987,18 +993,21 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.NanoBanana,
     defaults: {
       model: { id: 2154472 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.OpenAI,
     defaults: {
       model: { id: 1733399 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.Imagen4,
     defaults: {
       model: { id: 1889632 },
+      modelLocked: true,
     },
   },
   {
@@ -1012,18 +1021,21 @@ export const ecosystemSettings: EcosystemSettings[] = [
     ecosystemId: ECO.ZImageTurbo,
     defaults: {
       model: { id: 2442439 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.ZImageBase,
     defaults: {
       model: { id: 2635223 },
+      modelLocked: true,
     },
   },
   {
     ecosystemId: ECO.PonyV7,
     defaults: {
       model: { id: 2152373 },
+      modelLocked: true,
     },
   },
   {
