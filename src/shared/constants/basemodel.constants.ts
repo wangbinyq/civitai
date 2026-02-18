@@ -1061,7 +1061,7 @@ export const ecosystemSettings: EcosystemSettings[] = [
   {
     ecosystemId: ECO.Kling,
     defaults: {
-      model: { id: 2623821 },
+      model: { id: 2698632 },
       modelLocked: true,
     },
   },

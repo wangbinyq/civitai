@@ -51,6 +51,7 @@ import { sourceMetadataStore } from '~/store/source-metadata.store';
 import { workflowConfigByKey } from '~/shared/data-graph/generation/config/workflows';
 import { useRemixOfId } from './hooks/useRemixOfId';
 import { remixStore } from '~/store/remix.store';
+import { clearStorageForOutput } from './GenerationFormProvider';
 
 // =============================================================================
 // Helper Functions
@@ -359,9 +360,21 @@ export function FormFooter({ onSubmitSuccess }: { onSubmitSuccess?: () => void }
   };
 
   const handleReset = () => {
-    // Don't exclude 'model' - it should be reset to match the baseModel
-    // The checkpointNode factory will select a default model for the baseModel
-    graph.reset({ exclude: ['workflow', 'ecosystem'] });
+    // Determine current output type before resetting
+    const snap = graph.getSnapshot() as { output?: string };
+    const outputType = (snap.output ?? 'image') as 'image' | 'video';
+
+    // Clear all localStorage for workflows/ecosystems of this output type
+    clearStorageForOutput(outputType);
+
+    // Full reset — preserve output preferences (outputFormat, priority)
+    graph.reset({ exclude: ['outputFormat', 'priority'] });
+
+    // If video, switch to the default video workflow (graph default is txt2img)
+    if (outputType === 'video') {
+      graph.set({ workflow: 'txt2vid' } as Parameters<typeof graph.set>[0]);
+    }
+
     remixStore.clearRemix();
     clearWarning();
     setSubmitError(undefined);

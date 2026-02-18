@@ -87,8 +87,11 @@ export const ecosystemGraph = new DataGraph<
       const compatibleEcosystems = compatibleEcosystemIds
         .map((id) => ecosystemById.get(id)?.key)
         .filter((key): key is string => !!key);
-      // Default to first compatible ecosystem, or SDXL as fallback
-      const defaultValue = compatibleEcosystems[0] ?? 'SDXL';
+      // Default ecosystem by output type: ZImageTurbo for image, Kling for video
+      const outputDefault = ctx.output === 'video' ? 'Kling' : 'ZImageTurbo';
+      const defaultValue = compatibleEcosystems.includes(outputDefault)
+        ? outputDefault
+        : (compatibleEcosystems[0] ?? 'SDXL');
 
       return {
         input: z.string().optional(),

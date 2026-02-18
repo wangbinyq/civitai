@@ -1,11 +1,12 @@
-import { Button, Textarea, type TextareaProps } from '@mantine/core';
+import { Button, type TextareaProps } from '@mantine/core';
 import { getHotkeyHandler } from '@mantine/hooks';
 import { IconSparkles } from '@tabler/icons-react';
 import type { ClipboardEvent, KeyboardEvent } from 'react';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { create } from 'zustand';
 
 import { extractCivitaiMetadata, parsePromptMetadata } from '~/utils/metadata';
+import { AutosizeTextarea } from './AutosizeTextarea';
 
 // Store to track prompt focus state for whatIf debouncing
 export const usePromptFocusedStore = create<{ focused: boolean }>(() => ({ focused: false }));
@@ -18,15 +19,6 @@ export type PromptInputProps = Omit<TextareaProps, 'onChange'> & {
 export function PromptInput({ onFillForm, ...props }: PromptInputProps) {
   const [showFillForm, setShowFillForm] = useState(false);
   const [pastedMetadata, setPastedMetadata] = useState<Record<string, unknown> | null>(null);
-
-  // Force autosize recalculation after layout/fonts settle to prevent oversized textarea
-  const textareaRef = useCallback((node: HTMLTextAreaElement | null) => {
-    if (node) {
-      requestAnimationFrame(() => {
-        node.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-    }
-  }, []);
 
   function handleArrowUpOrDown(event: KeyboardEvent<HTMLElement> | globalThis.KeyboardEvent) {
     if (props.name) {
@@ -76,9 +68,8 @@ export function PromptInput({ onFillForm, ...props }: PromptInputProps) {
 
   return (
     <div className="relative">
-      <Textarea
+      <AutosizeTextarea
         {...props}
-        ref={textareaRef}
         onChange={(e) => props.onChange?.(e.target.value)}
         onKeyDown={keyHandler}
         onPaste={handlePaste}

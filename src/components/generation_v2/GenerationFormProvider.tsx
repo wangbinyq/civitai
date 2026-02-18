@@ -43,23 +43,65 @@ import { needsHydration, type PartialResourceValue } from './inputs/resource-sel
 const STORAGE_KEY = 'generation-graph';
 
 // =============================================================================
+// Storage Utilities
+// =============================================================================
+
+/**
+ * Clear all localStorage entries for workflows of a given output type.
+ * Removes global settings (prompt, seed, etc.), output-scoped ecosystem,
+ * workflow-scoped settings, and ecosystem-scoped settings for all
+ * ecosystems used by workflows of that output type.
+ */
+export function clearStorageForOutput(outputType: 'image' | 'video') {
+  // Global key (prompt, seed, quantity, outputFormat, etc.)
+  localStorage.removeItem(STORAGE_KEY);
+
+  // Output-scoped ecosystem
+  localStorage.removeItem(`${STORAGE_KEY}.output.${outputType}`);
+
+  // Collect all ecosystem IDs used by workflows of this output type
+  const ecosystemIds = new Set<number>();
+
+  // Workflow-scoped keys
+  for (const [key] of workflowConfigByKey) {
+    if (getOutputTypeForWorkflow(key) === outputType) {
+      localStorage.removeItem(`${STORAGE_KEY}.workflow.${key}`);
+      for (const ecoId of getEcosystemsForWorkflow(key)) {
+        ecosystemIds.add(ecoId);
+      }
+    }
+  }
+
+  // Ecosystem-scoped keys (individual + group)
+  const clearedGroups = new Set<string>();
+  for (const ecoId of ecosystemIds) {
+    const eco = ecosystemById.get(ecoId);
+    if (!eco) continue;
+
+    // Individual ecosystem key
+    localStorage.removeItem(`${STORAGE_KEY}.ecosystem.${eco.key}`);
+
+    // Ecosystem group key (shared settings across group variants)
+    const group = getEcosystemGroup(ecoId);
+    if (group && !clearedGroups.has(group.id)) {
+      localStorage.removeItem(`${STORAGE_KEY}.ecosystem.${group.id}`);
+      clearedGroups.add(group.id);
+    }
+  }
+}
+
+// =============================================================================
 // Storage Adapter
 // =============================================================================
 
 const storageAdapter = createLocalStorageAdapter({
   prefix: STORAGE_KEY,
   groups: [
+    // User preferences - persisted across resets
+    { name: 'preferences', keys: ['outputFormat', 'priority'] },
     // Workflow is the primary selector - stored globally
     {
-      keys: [
-        'workflow',
-        'outputFormat',
-        'priority',
-        'prompt',
-        'negativePrompt',
-        'seed',
-        'quantity',
-      ],
+      keys: ['workflow', 'prompt', 'negativePrompt', 'seed', 'quantity'],
     },
     { name: 'output', keys: ['ecosystem'], scope: 'output' },
     // ecosystem is scoped to workflow (different workflows may use different ecosystems)

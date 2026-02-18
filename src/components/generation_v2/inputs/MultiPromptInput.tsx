@@ -6,10 +6,11 @@
  * Allows adding, removing, and editing prompt segments.
  */
 
-import { ActionIcon, Button, Input, NumberInput, Stack, Text, Textarea } from '@mantine/core';
+import { ActionIcon, Button, Input, NumberInput, Stack, Text } from '@mantine/core';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import type z from 'zod';
 import type { klingV3MultiPromptSchema } from '~/shared/data-graph/generation/kling-graph';
+import { AutosizeTextarea } from './AutosizeTextarea';
 
 // =============================================================================
 // Types
@@ -66,7 +67,7 @@ export function MultiPromptInput({ value, onChange }: MultiPromptInputProps) {
                 <IconTrash size={14} />
               </ActionIcon>
             </div>
-            <Textarea
+            <AutosizeTextarea
               placeholder="Describe this segment..."
               value={segment.prompt}
               onChange={(e) => updateSegment(index, { prompt: e.target.value })}
