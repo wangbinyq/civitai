@@ -64,13 +64,10 @@ export const useSignalTopic = (
   topic: `${SignalTopic}${'' | `:${number | string}`}` | undefined,
   notify?: boolean
 ) => {
-  console.log('useSignalTopic called with topic:', topic);
   const { worker, registeredTopics, setRegisteredTopics } = useSignalContext();
 
   const interval = useInterval(() => {
     if (!topic) return;
-
-    console.log('Re-registering signal topic:', topic);
     worker?.topicRegister(topic, notify);
     if (!registeredTopics.includes(topic)) setRegisteredTopics((prev) => [...prev, topic]);
   }, 60000);
@@ -93,8 +90,9 @@ export const useSignalTopic = (
           setRegisteredTopics((prev) => prev.filter((t) => t !== topic));
       }
     };
-    // }, [interval, notify, topic, worker]);
-  }, [topic, worker]);
+    // Note: `registeredTopics` intentionally excluded to avoid infinite re-render loop
+    // since this effect modifies it. `interval` is stable (Mantine ref-based).
+  }, [topic, worker, notify]);
 };
 
 const SIGNAL_DATA_REFRESH_DEBOUNCE = 10;
@@ -125,7 +123,6 @@ export function SignalProvider({ children }: { children: React.ReactNode }) {
   });
 
   const connected = status === 'connected';
-  console.log('SignalProvider status:', status, 'connected:', connected);
 
   return (
     <SignalContext.Provider

@@ -13,14 +13,13 @@ export function useMetricSignalsListener() {
 
   const handleMetricUpdate = useCallback(
     (payload: MetricUpdatePayload & { entityType?: MetricEntityType; entityId?: number }) => {
-      // The payload structure from event-engine is { [metricType]: delta }
-      // But we need entityType and entityId from the topic subscription
-      // Since signals are topic-based, the worker should include this info
-
-      if (payload.entityType && payload.entityId) {
-        const { entityType, entityId, ...updates } = payload;
-        applyDelta(entityType, entityId, updates);
+      if (!payload.entityType || !payload.entityId) {
+        console.warn('MetricSignalsRegistrar: missing entityType or entityId in payload', payload);
+        return;
       }
+
+      const { entityType, entityId, ...updates } = payload;
+      applyDelta(entityType, entityId, updates);
     },
     [applyDelta]
   );
