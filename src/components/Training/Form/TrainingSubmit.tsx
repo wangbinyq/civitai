@@ -86,11 +86,12 @@ const maxRuns = 5;
 const prefersCaptions: TrainingBaseModelType[] = [
   'flux',
   'flux2',
+  'flux2klein',
   'sd35',
   'hunyuan',
   'wan',
   'chroma',
-  'zimageturbo',
+  'zimage',
 ];
 
 export const TrainingFormSubmit = ({ model }: { model: NonNullable<TrainingModelData> }) => {
@@ -878,7 +879,7 @@ export const TrainingFormSubmit = ({ model }: { model: NonNullable<TrainingModel
         </AlertWithIcon>
       )}
 
-      {selectedRun.baseType === 'zimageturbo' && (
+      {selectedRun.baseType === 'zimage' && (
         <AlertWithIcon
           icon={<IconAlertTriangle size={16} />}
           iconColor="yellow"
@@ -889,8 +890,8 @@ export const TrainingFormSubmit = ({ model }: { model: NonNullable<TrainingModel
         >
           <Group gap="sm" justify="space-between" wrap="nowrap">
             <Text>
-              Z&ndash;Image Turbo training is experimental, and we’re still fine-tuning things
-              behind the scenes{' '}
+              Z&ndash;Image training is experimental, and we're still fine-tuning things behind the
+              scenes{' '}
             </Text>
           </Group>
         </AlertWithIcon>

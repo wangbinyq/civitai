@@ -651,6 +651,7 @@ export const REDIS_SYS_KEYS = {
   QUEUES: {
     BUCKETS: 'queues:buckets',
     SEEN_IMAGES: 'queues:seen-images',
+    USER_CONTENT_REMOVAL: 'queues:user-content-removal',
   },
   RESEARCH: {
     RATINGS_TRACKS: 'research:ratings-tracks-2',
@@ -659,10 +660,12 @@ export const REDIS_SYS_KEYS = {
   LIMITS: {
     EMAIL_VERIFICATIONS: 'limits:email-verifications',
     HISTORY_DOWNLOADS: 'limits:history-downloads',
+    CHAT_MESSAGES: 'limits:chat-messages',
   },
   COUNTERS: {
     EMAIL_VERIFICATIONS: 'counters:email-verifications',
     HISTORY_DOWNLOADS: 'counters:history-downloads',
+    CHAT_MESSAGES: 'counters:chat-messages',
   },
   INDEXES: {
     IMAGE_DELETED: 'indexes:image-deleted',

@@ -1,14 +1,12 @@
-import dayjs from '~/shared/utils/dayjs';
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import type {
   ChallengePrompts,
+  JudgingConfig,
   Prize,
   Score,
 } from '~/server/games/daily-challenge/daily-challenge.utils';
-import { openai } from '~/server/services/ai/openai';
+import { openrouter, AI_MODELS, type AIModel } from '~/server/services/ai/openrouter';
 import type { ReviewReactions } from '~/shared/utils/prisma/enums';
 import { markdownToHtml } from '~/utils/markdown-helpers';
-import { asOrdinal, numberWithCommas } from '~/utils/number-helpers';
 import { stripLeadingWhitespace } from '~/utils/string-helpers';
 
 type GenerateCollectionDetailsInput = {
@@ -21,18 +19,19 @@ type GenerateCollectionDetailsInput = {
     id: number;
     url: string;
   };
-  config: ChallengeConfig;
+  config: JudgingConfig;
+  model?: AIModel;
 };
 type CollectionDetails = {
   name: string;
   description: string;
 };
 export async function generateCollectionDetails(input: GenerateCollectionDetailsInput) {
-  if (!openai) throw new Error('OpenAI not connected');
+  if (!openrouter) throw new Error('OpenRouter not connected');
 
-  const results = await openai.getJsonCompletion<CollectionDetails>({
+  const results = await openrouter.getJsonCompletion<CollectionDetails>({
     retries: 3,
-    model: 'gpt-4o',
+    model: input.model ?? AI_MODELS.GROK,
     messages: [
       prepareSystemMessage(
         input.config,
@@ -43,14 +42,14 @@ export async function generateCollectionDetails(input: GenerateCollectionDetails
         }`
       ),
       {
-        role: 'user',
+        role: 'user' as const,
         content: [
           {
-            type: 'text',
+            type: 'text' as const,
             text: `Resource title: ${input.resource.title}\nCreator: ${input.resource.creator}`,
           },
           {
-            type: 'image_url',
+            type: 'image_url' as const,
             image_url: {
               url: input.image.url,
             },
@@ -73,12 +72,14 @@ type GenerateArticleInput = {
     id: number;
     url: string;
   };
-  collectionId: number;
   challengeDate: Date;
   prizes: Array<Prize>;
   entryPrizeRequirement: number;
   entryPrize: Prize;
-  config: ChallengeConfig;
+  allowedNsfwLevel: number;
+  config: JudgingConfig;
+  model?: AIModel;
+  userMessageOverride?: string;
 };
 type GeneratedArticle = {
   title: string;
@@ -89,22 +90,23 @@ type GeneratedArticle = {
 export async function generateArticle({
   resource,
   image,
-  collectionId,
-  challengeDate,
-  prizes,
-  entryPrizeRequirement,
-  entryPrize,
   config,
+  model,
+  userMessageOverride,
 }: GenerateArticleInput) {
-  if (!openai) throw new Error('OpenAI not connected');
+  if (!openrouter) throw new Error('OpenRouter not connected');
 
-  const result = await openai.getJsonCompletion<GeneratedArticle>({
+  const userText =
+    userMessageOverride ??
+    `Resource title: ${resource.title}\nResource link: https://civitai.com/models/${resource.modelId}\nCreator: ${resource.creator}\nCreator link: https://civitai.com/user/${resource.creator}`;
+
+  const result = await openrouter.getJsonCompletion<GeneratedArticle>({
     retries: 3,
-    model: 'gpt-4o',
+    model: model ?? AI_MODELS.GROK,
     messages: [
       prepareSystemMessage(
         config,
-        'article',
+        'content',
         `{
           "title": "title of the challenge/article",
           "invitation": "a single sentence invitation to participate in the challenge displayed in the on-site generator",
@@ -113,14 +115,14 @@ export async function generateArticle({
         }`
       ),
       {
-        role: 'user',
+        role: 'user' as const,
         content: [
           {
-            type: 'text',
-            text: `Resource title: ${resource.title}\nResource link: https://civitai.com/models/${resource.modelId}\nCreator: ${resource.creator}\nCreator link: https://civitai.com/user/${resource.creator}`,
+            type: 'text' as const,
+            text: userText,
           },
           {
-            type: 'image_url',
+            type: 'image_url' as const,
             image_url: {
               url: image.url,
             },
@@ -130,57 +132,8 @@ export async function generateArticle({
     ],
   });
 
-  // TODO - Append submission and prize details
   const markdownContent = stripLeadingWhitespace(`
     ${result.body}
-
-    ## 🤔 How to create entries
-    New to these challenges? Here are a few ways to get started:
-    - Visit the [resource page](/models/${
-      resource.modelId
-    }) and click the "Create" button and type in your own prompt to generate images.
-    - Browse the [gallery](/models/${
-      resource.modelId
-    }) and click the "Remix" button on the top right of any image to create your own version.
-    - Download the resource from the [resource page](/models/${
-      resource.modelId
-    }) and use it on your local machine.
-
-    ## ⭐ Prizes
-    **Winners will receive**:
-    ${prizes
-      .map(
-        (prize, i) =>
-          `- **${asOrdinal(i + 1)}**: <span style="color:#fab005">${numberWithCommas(
-            prize.buzz
-          )} Buzz</span>, ${prize.points} Challenge Points`
-      )
-      .join('\n')}
-
-    Winners will be announced at 12am UTC in this article and notified via on-site notification.
-
-    **Participation rewards!**:
-    If you submit ${entryPrizeRequirement} entries, you'll be rewarded <span style="color:#228be6">${
-    entryPrize.buzz
-  } Buzz</span> and ${
-    entryPrize.points
-  } Challenge Points. Make sure your entries follow the rules though, because only valid entries will be rewarded!
-
-
-    ## 📝 How to Enter
-    Simply head to the [image collection](/collections/${collectionId}) then click the blue **Submit an Entry** button!
-
-
-    ### 👉 [Submit Entries](/collections/${collectionId}) 👈
-
-    ## 📜 Rules
-    1. All entries must be submitted before the end of ${dayjs(challengeDate).format(
-      'MMMM DD'
-    )} (23:59 UTC).
-    2. All submitted images must be SFW (PG) and adhere to our **Terms of Service**.
-    3. Participants can submit up to ${entryPrizeRequirement * 2} images.
-    4. Low-effort entries are not allowed. Submitting entries with no relevance to the current contest, with the intention of farming Participation Reward Buzz, may result in a Contest Ban. Contest-banned users will be prohibited from participating in all future Civitai contests!
-    5. Entries must use the provided model.
   `);
   const content = await markdownToHtml(markdownContent);
 
@@ -196,7 +149,9 @@ type GenerateReviewInput = {
   theme: string;
   creator: string;
   imageUrl: string;
-  config: ChallengeConfig;
+  config: JudgingConfig;
+  model?: AIModel;
+  userMessageOverride?: string;
 };
 type GeneratedReview = {
   score: Score;
@@ -205,11 +160,13 @@ type GeneratedReview = {
   summary: string;
 };
 export async function generateReview(input: GenerateReviewInput) {
-  if (!openai) throw new Error('OpenAI not connected');
+  if (!openrouter) throw new Error('OpenRouter not connected');
 
-  const result = await openai.getJsonCompletion<GeneratedReview>({
+  const userText = input.userMessageOverride ?? `Theme: ${input.theme}\nCreator: ${input.creator}`;
+
+  const result = await openrouter.getJsonCompletion<GeneratedReview>({
     retries: 3,
-    model: 'gpt-4o',
+    model: input.model ?? AI_MODELS.GROK,
     messages: [
       prepareSystemMessage(
         input.config,
@@ -227,14 +184,14 @@ export async function generateReview(input: GenerateReviewInput) {
         }`
       ),
       {
-        role: 'user',
+        role: 'user' as const,
         content: [
           {
-            type: 'text',
-            text: `Theme: ${input.theme}\nCreator: ${input.creator}`,
+            type: 'text' as const,
+            text: userText,
           },
           {
-            type: 'image_url',
+            type: 'image_url' as const,
             image_url: {
               url: input.imageUrl,
             },
@@ -255,7 +212,9 @@ type GenerateWinnersInput = {
     score: Score;
   }>;
   theme: string;
-  config: ChallengeConfig;
+  config: JudgingConfig;
+  model?: AIModel;
+  userMessageOverride?: string;
 };
 type GeneratedWinners = {
   winners: Array<{
@@ -267,35 +226,40 @@ type GeneratedWinners = {
   outcome: string;
 };
 export async function generateWinners(input: GenerateWinnersInput) {
-  if (!openai) throw new Error('OpenAI not connected');
+  if (!openrouter) throw new Error('OpenRouter not connected');
 
-  const result = await openai.getJsonCompletion<GeneratedWinners>({
+  const userText =
+    input.userMessageOverride ??
+    `Theme: ${input.theme}\nEntries:\n\`\`\`json \n${JSON.stringify(
+      input.entries,
+      null,
+      2
+    )}\n\`\`\``;
+
+  const result = await openrouter.getJsonCompletion<GeneratedWinners>({
     retries: 3,
-    model: 'gpt-4o',
+    model: input.model ?? AI_MODELS.GROK,
     messages: [
       prepareSystemMessage(
         input.config,
         'winner',
         `{
-          "winners": [{
-          "creatorId": "id of the creator",
-          "creator": "name of the creator",
-          "reason": "why you chose them and what you liked about their image"
-          }],
-          "process": "about your judging process and the challenge as markdown",
-          "outcome": "summary about the outcome of the challenge as markdown"
-        }`
+          "winners": [
+            {"creatorId": <id from entries>, "creator": "<name from entries>", "reason": "<why they won 1st place>"},
+            {"creatorId": <id from entries>, "creator": "<name from entries>", "reason": "<why they won 2nd place>"},
+            {"creatorId": <id from entries>, "creator": "<name from entries>", "reason": "<why they won 3rd place>"}
+          ],
+          "process": "<about your judging process and the challenge as markdown>",
+          "outcome": "<summary about the outcome of the challenge as markdown>"
+        }
+        IMPORTANT: Select exactly 3 different winners (1st, 2nd, 3rd place) using creatorId and creator values from the entries provided.`
       ),
       {
-        role: 'user',
+        role: 'user' as const,
         content: [
           {
-            type: 'text',
-            text: `Theme: ${input.theme}\nEntries:\n\`\`\`json \n${JSON.stringify(
-              input.entries,
-              null,
-              2
-            )}\n\`\`\``,
+            type: 'text' as const,
+            text: userText,
           },
         ],
       },
@@ -307,9 +271,10 @@ export async function generateWinners(input: GenerateWinnersInput) {
 
 // Helpers
 // ------------------------------------
+
 function prepareSystemMessage(
-  config: ChallengeConfig,
-  promptType: ChallengePromptType,
+  config: JudgingConfig,
+  promptType: JudgingPromptType,
   responseStructure: string
 ) {
   // Remove leading whitespace
@@ -319,17 +284,15 @@ function prepareSystemMessage(
   const text = `${config.prompts.systemMessage}\n\n${taskSummary}\n\nReply with json\n\n${responseStructure}`;
 
   return {
-    role: 'system',
+    role: 'system' as const,
     content: [
       {
-        type: 'text',
+        type: 'text' as const,
         text,
       },
     ],
-  } as ChatCompletionMessageParam;
+  };
 }
 
-type ChallengeConfig = {
-  prompts: ChallengePrompts;
-};
-type ChallengePromptType = keyof ChallengePrompts;
+/** Prompt types that can be used with prepareSystemMessage. Excludes deprecated 'article' field. */
+type JudgingPromptType = Exclude<keyof ChallengePrompts, 'article'>;

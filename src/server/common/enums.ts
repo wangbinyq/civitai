@@ -190,6 +190,28 @@ export enum BlockedReason {
   AiNotVerified = 'AiNotVerified',
 }
 
+export enum ViolationType {
+  RealPerson = 'realPerson',
+  RealPersonNsfw = 'realPersonNsfw',
+  RealisticMinor = 'realisticMinor',
+  RealisticMinorNsfw = 'realisticMinorNsfw',
+  AnimatedMinorNsfw = 'animatedMinorNsfw',
+  SchoolNsfw = 'schoolNsfw',
+  Bestiality = 'bestiality',
+  SexualViolence = 'sexualViolence',
+  MindAlteredNsfw = 'mindAlteredNsfw',
+  FecalMatter = 'fecalMatter',
+  Gore = 'gore',
+  Diaper = 'diaper',
+  Anorexia = 'anorexia',
+  BodilyFluids = 'bodilyFluids',
+  Incest = 'incest',
+  Hate = 'hate',
+  NonAi = 'non-ai',
+  Spam = 'spam',
+  Other = 'other',
+}
+
 export enum ThreadSort {
   Newest = 'Newest',
   Oldest = 'Oldest',
@@ -336,6 +358,7 @@ export enum OrchEngineTypes {
 export enum BlocklistType {
   EmailDomain = 'EmailDomain',
   LinkDomain = 'LinkDomain',
+  MessagePattern = 'MessagePattern',
 }
 
 export enum ToolSort {

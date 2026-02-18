@@ -8,6 +8,8 @@ import {
   Group,
   Loader,
   Stack,
+  Table,
+  Tabs,
   Text,
   Title,
   Tooltip,
@@ -285,6 +287,11 @@ function PromptAuditTestPage() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: userCountsData, refetch: refetchUserCounts } =
+    trpc.userRestriction.getTodaysUserCounts.useQuery(undefined, {
+      refetchOnWindowFocus: false,
+    });
+
   // Flatten results to show one card per match
   const flattenedResults = useMemo(() => {
     const results: FlattenedResult[] = [];
@@ -315,6 +322,8 @@ function PromptAuditTestPage() {
     return map;
   }, [flattenedResults]);
 
+  const userCounts = userCountsData?.userCounts ?? [];
+
   return (
     <>
       <Meta title="Prompt Audit Test" deIndex />
@@ -333,7 +342,10 @@ function PromptAuditTestPage() {
                 <Button
                   leftSection={<IconRefresh size={16} />}
                   variant="light"
-                  onClick={() => refetch()}
+                  onClick={() => {
+                    refetch();
+                    refetchUserCounts();
+                  }}
                   loading={isRefetching}
                 >
                   Refresh
@@ -344,27 +356,63 @@ function PromptAuditTestPage() {
             <Divider mt="md" />
           </div>
 
-          {/* Main Results */}
           {isLoading ? (
             <Group justify="center" py="xl">
               <Loader />
             </Group>
-          ) : flattenedResults.length === 0 ? (
-            <Text c="dimmed" ta="center" py="xl">
-              No audit matches found for today&apos;s prohibited prompts.
-            </Text>
           ) : (
-            <>
-              <Text size="sm" c="dimmed">
-                Showing {flattenedResults.length} matches from {auditData?.results.length ?? 0}{' '}
-                prohibited prompts today. Select suspicious matches to flag for review.
-              </Text>
-              <Stack gap="md">
-                {flattenedResults.map((item) => (
-                  <AuditMatchCard key={item.key} item={item} isMounted={isMounted} />
-                ))}
-              </Stack>
-            </>
+            <Tabs defaultValue="matches">
+              <Tabs.List>
+                <Tabs.Tab value="matches">Matches ({flattenedResults.length})</Tabs.Tab>
+                <Tabs.Tab value="by-user">By User ({userCounts.length})</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="matches" pt="md">
+                {flattenedResults.length === 0 ? (
+                  <Text c="dimmed" ta="center" py="xl">
+                    No audit matches found for today&apos;s prohibited prompts.
+                  </Text>
+                ) : (
+                  <>
+                    <Text size="sm" c="dimmed" mb="md">
+                      Showing {flattenedResults.length} matches from{' '}
+                      {auditData?.results.length ?? 0} prohibited prompts today. Select suspicious
+                      matches to flag for review.
+                    </Text>
+                    <Stack gap="md">
+                      {flattenedResults.map((item) => (
+                        <AuditMatchCard key={item.key} item={item} isMounted={isMounted} />
+                      ))}
+                    </Stack>
+                  </>
+                )}
+              </Tabs.Panel>
+
+              <Tabs.Panel value="by-user" pt="md">
+                {userCounts.length === 0 ? (
+                  <Text c="dimmed" ta="center" py="xl">
+                    No prohibited prompts found for today.
+                  </Text>
+                ) : (
+                  <Table striped highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>User ID</Table.Th>
+                        <Table.Th style={{ textAlign: 'right' }}>Prohibited Prompts</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {userCounts.map(({ userId, count }) => (
+                        <Table.Tr key={userId}>
+                          <Table.Td>{userId}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{count}</Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+              </Tabs.Panel>
+            </Tabs>
           )}
         </Stack>
       </Container>

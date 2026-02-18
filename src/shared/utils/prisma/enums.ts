@@ -817,6 +817,45 @@ export const NewOrderRankType = {
 
 export type NewOrderRankType = (typeof NewOrderRankType)[keyof typeof NewOrderRankType];
 
+export const ChallengeSource = {
+  System: 'System',
+  Mod: 'Mod',
+  User: 'User',
+} as const;
+
+export type ChallengeSource = (typeof ChallengeSource)[keyof typeof ChallengeSource];
+
+export const ChallengeStatus = {
+  Scheduled: 'Scheduled',
+  Active: 'Active',
+  Completed: 'Completed',
+  Cancelled: 'Cancelled',
+} as const;
+
+export type ChallengeStatus = (typeof ChallengeStatus)[keyof typeof ChallengeStatus];
+
+export const PrizeMode = {
+  Fixed: 'Fixed',
+  Dynamic: 'Dynamic',
+} as const;
+
+export type PrizeMode = (typeof PrizeMode)[keyof typeof PrizeMode];
+
+export const PoolTrigger = {
+  Entry: 'Entry',
+  User: 'User',
+} as const;
+
+export type PoolTrigger = (typeof PoolTrigger)[keyof typeof PoolTrigger];
+
+export const ChallengeReviewCostType = {
+  None: 'None',
+  PerEntry: 'PerEntry',
+  Flat: 'Flat',
+} as const;
+
+export type ChallengeReviewCostType = (typeof ChallengeReviewCostType)[keyof typeof ChallengeReviewCostType];
+
 export const EntityMetric_EntityType_Type = {
   Image: 'Image',
 } as const;

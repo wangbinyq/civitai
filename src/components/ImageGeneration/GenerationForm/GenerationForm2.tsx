@@ -368,7 +368,6 @@ export function GenerationFormContent() {
           ...params,
           // nsfw: hasMinorResources || !featureFlags.canViewNsfw ? false : params.nsfw,
           disablePoi: browsingSettingsAddons.settings.disablePoi,
-          experimental: data.enhancedCompatibility,
         },
         tips,
         remixOfId: remixSimilarity && remixSimilarity > 0.75 ? remixOfId : undefined,
@@ -701,8 +700,7 @@ export function GenerationFormContent() {
               : isFlux2Klein
               ? [...flux2KleinSampleMethods]
               : generation.samplers;
-            const disableSteps =
-              isFluxUltra || isFluxKontext || isSeedream || isFlux2KleinDistilled;
+            const disableSteps = isFluxUltra || isFluxKontext || isSeedream;
             const disableClipSkip =
               isSDXL ||
               isFlux ||
@@ -727,7 +725,7 @@ export function GenerationFormContent() {
               isSeedream ||
               isZImageTurbo ||
               isZImageBase;
-            const disableDenoise = !features.denoise || isFluxKontext;
+            const disableDenoise = !features.denoise || isFluxKontext || isImageGen;
             const disableSafetyTolerance = !isFluxKontext;
             const disableAspectRatio =
               (isFluxUltra || isImg2Img || showImg2ImgMultiple) &&
@@ -1736,9 +1734,7 @@ export function GenerationFormContent() {
                                       </div>
                                     }
                                     data={
-                                      isZImageBase
-                                        ? [...zImageSchedules]
-                                        : [...flux2KleinSchedules]
+                                      isZImageBase ? [...zImageSchedules] : [...flux2KleinSchedules]
                                     }
                                     presets={[{ label: 'Default', value: 'simple' }]}
                                   />
@@ -1870,24 +1866,25 @@ export function GenerationFormContent() {
                                 }}
                               />
                             )}
-                            {EXPERIMENTAL_MODE_SUPPORTED_MODELS.includes(
-                              getBaseModelGroup(baseModel)
-                            ) && (
-                              <InputSwitch
-                                name="enhancedCompatibility"
-                                labelPosition="left"
-                                label={
-                                  <div className="relative flex items-center gap-1">
-                                    <Input.Label>Enhanced Compatibility</Input.Label>
-                                    <InfoPopover size="xs" iconProps={{ size: 14 }} withinPortal>
-                                      {`We've updated our generation engine for better performance,
+                            {!isFlux &&
+                              EXPERIMENTAL_MODE_SUPPORTED_MODELS.includes(
+                                getBaseModelGroup(baseModel)
+                              ) && (
+                                <InputSwitch
+                                  name="enhancedCompatibility"
+                                  labelPosition="left"
+                                  label={
+                                    <div className="relative flex items-center gap-1">
+                                      <Input.Label>Enhanced Compatibility</Input.Label>
+                                      <InfoPopover size="xs" iconProps={{ size: 14 }} withinPortal>
+                                        {`We've updated our generation engine for better performance,
                                         but older prompts may look different. Turn this on to make
                                         new generations look more like your originals.`}
-                                    </InfoPopover>
-                                  </div>
-                                }
-                              />
-                            )}
+                                      </InfoPopover>
+                                    </div>
+                                  }
+                                />
+                              )}
                           </div>
                           {/* <Text variant="link" onClick={() => {
                           const {prompt = '', negativePrompt = ''}= useGenerationStore.getState().data?.originalParams ?? {};
