@@ -149,6 +149,7 @@ const featureFlags = createFeatureFlags({
   trainingModelsModeration: ['granted'],
   cashManagement: ['granted'],
   challengePlatform: ['blue', 'red', 'public'],
+  liveMetrics: { availability: ['mod'], fliptKey: 'live-metrics' },
 });
 
 export const featureFlagKeys = Object.keys(featureFlags) as FeatureFlagKey[];
