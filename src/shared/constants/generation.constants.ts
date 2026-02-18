@@ -366,7 +366,7 @@ export function getBaseModelFromResources<T extends { modelType: ModelType; base
   else if (resourceBaseModels.some((baseModel) => baseModel === 'Flux2Klein_4B')) return 'Flux2Klein_4B';
   else if (resourceBaseModels.some((baseModel) => baseModel === 'Flux2Klein_4B_base')) return 'Flux2Klein_4B_base';
   else if (resourceBaseModels.some((baseModel) => baseModel === 'SD1')) return 'SD1';
-  
+
   // video base models
   for (const baseModelSet of getBaseModelGroupsByMediaType('video')) {
     if (resources.some((x) => getBaseModelGroup(x.baseModel) === baseModelSet)) return baseModelSet;
@@ -497,8 +497,8 @@ export const EXPERIMENTAL_MODE_SUPPORTED_MODELS: string[] = [
   'Pony',
   'Illustrious',
   'NoobAI',
-  'Flux1',
-  'FluxKrea',
+  // 'Flux1',
+  // 'FluxKrea',
 ];
 export const fluxModeOptions = [
   { label: 'Draft', value: fluxDraftAir },

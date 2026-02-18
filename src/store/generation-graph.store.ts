@@ -12,7 +12,11 @@ import { immer } from 'zustand/middleware/immer';
 import type { GetGenerationDataInput } from '~/server/schema/generation.schema';
 import type { GenerationData } from '~/server/services/generation/generation.service';
 import type { ResourceData } from '~/shared/data-graph/generation/common';
-import { getOutputTypeForWorkflow } from '~/shared/data-graph/generation/config/workflows';
+import {
+  getOutputTypeForWorkflow,
+  isNewFormOnly,
+} from '~/shared/data-graph/generation/config/workflows';
+import { ecosystemByKey } from '~/shared/constants/basemodel.constants';
 import { getEngineFromEcosystem } from '~/shared/utils/engine.utils';
 import type { GenerationResource } from '~/shared/types/generation.types';
 import type { OrchestratorEngine2 } from '~/server/orchestrator/generation/generation.config';
@@ -69,9 +73,20 @@ interface GenerationGraphState {
  * shows the right UI. Remove when legacy generator is removed.
  * See docs/legacy-generator-files.md
  */
-function syncLegacyFormStore(params: Record<string, unknown>) {
+function syncLegacyFormStore(
+  params: Record<string, unknown>,
+  resources?: ResourceData[]
+) {
   const workflow = params.workflow as string | undefined;
   const ecosystem = params.ecosystem as string | undefined;
+
+  // Skip sync for new-form-only data — the legacy form provider will show
+  // the switch-to-new-form modal instead.
+  if (workflow) {
+    const ecosystemId = ecosystem ? ecosystemByKey.get(ecosystem)?.id : undefined;
+    const checkpointModelId = resources?.find((r) => r.model.type === 'Checkpoint')?.id;
+    if (isNewFormOnly(workflow, ecosystemId, checkpointModelId)) return;
+  }
 
   if (workflow) {
     const outputType = getOutputTypeForWorkflow(workflow);
@@ -154,7 +169,7 @@ export const useGenerationGraphStore = create<GenerationGraphState>()(
             const resources = result.resources.map(substituteResource).map(toResourceData);
 
             // TEMPORARY: Sync legacy form store (remove with legacy generator)
-            syncLegacyFormStore(result.params);
+            syncLegacyFormStore(result.params, resources);
 
             // Update remix store for similarity tracking
             if (isMedia && result.remixOfId) {
@@ -184,7 +199,7 @@ export const useGenerationGraphStore = create<GenerationGraphState>()(
 
       setData: ({ params, resources, runType = 'replay', remixOfId }) => {
         // TEMPORARY: Sync legacy form store (remove with legacy generator)
-        syncLegacyFormStore(params);
+        syncLegacyFormStore(params, resources);
 
         if (typeof window !== 'undefined' && !location.pathname.startsWith('/generate'))
           useGenerationPanelStore.setState({ view: 'generate' });

@@ -18,7 +18,6 @@ import {
   aspectRatioNode,
   cfgScaleNode,
   createCheckpointGraph,
-  enhancedCompatibilityNode,
   resourcesNode,
   samplerNode,
   schedulerNode,
@@ -109,8 +108,7 @@ const turboModeGraph = new DataGraph<ZImageModeCtx, GenerationCtx>()
       defaultValue: 9,
     })
   )
-  .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode());
+  .node('seed', seedNode());
 
 /**
  * Base mode subgraph: resources + full controls including sampler/scheduler
@@ -146,8 +144,7 @@ const baseModeGraph = new DataGraph<ZImageModeCtx, GenerationCtx>()
       defaultValue: 20,
     })
   )
-  .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode());
+  .node('seed', seedNode());
 
 // =============================================================================
 // ZImage Graph V2

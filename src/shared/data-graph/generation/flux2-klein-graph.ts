@@ -19,7 +19,6 @@ import {
   aspectRatioNode,
   cfgScaleNode,
   createCheckpointGraph,
-  enhancedCompatibilityNode,
   imagesNode,
   negativePromptNode,
   resourcesNode,
@@ -116,7 +115,6 @@ const distilledModeGraph = new DataGraph<Flux2KleinModeCtx, GenerationCtx>()
   .node('negativePrompt', negativePromptNode())
   .node('steps', stepsNode({ min: 4, max: 12, defaultValue: 8 }))
   .node('seed', seedNode());
-// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 /**
  * Base mode subgraph: resources + full controls
@@ -139,7 +137,6 @@ const baseModeGraph = new DataGraph<Flux2KleinModeCtx, GenerationCtx>()
   .node('cfgScale', cfgScaleNode({ min: 2, max: 20, defaultValue: 7 }))
   .node('steps', stepsNode({ min: 20, max: 50, defaultValue: 30 }))
   .node('seed', seedNode());
-// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 // =============================================================================
 // Flux.2 Klein Graph

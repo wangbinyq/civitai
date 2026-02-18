@@ -472,6 +472,51 @@ export function getWorkflowLabelForEcosystem(graphKey: string, ecosystemId?: num
 }
 
 // =============================================================================
+// Legacy Form Support
+// =============================================================================
+
+/**
+ * Rules for workflow/ecosystem/model combinations ONLY available in the new generation form.
+ * The legacy form does not support these combinations.
+ *
+ * Entry types:
+ * - `true` — the entire workflow has no legacy equivalent
+ * - `(ecosystemId, modelId?) => boolean` — predicate for fine-grained checks
+ *   (e.g. a specific model version within an ecosystem)
+ *
+ * When adding new workflows or ecosystem/model support only to the new form, add them here.
+ */
+type NewFormOnlyRule = true | ((ecosystemId: number, modelId?: number) => boolean);
+
+/** Kling V3 model version ID (from kling-graph.ts klingVersionIds) */
+const KLING_V3_MODEL_ID = 2698632;
+
+const NEW_FORM_ONLY = new Map<string, NewFormOnlyRule>([
+  // Kling V3 on standard video workflows (legacy only supports V1.6, V2, V2.5)
+  ['txt2vid', (ecoId, modelId) => ecoId === ECO.Kling && modelId === KLING_V3_MODEL_ID],
+  ['img2vid', (ecoId, modelId) => ecoId === ECO.Kling && modelId === KLING_V3_MODEL_ID],
+
+  // ref2vid: legacy forms for Kling and Veo3 don't support this workflow
+  ['img2vid:ref2vid', (ecoId) => ecoId === ECO.Kling || ecoId === ECO.Veo3],
+]);
+
+/**
+ * Check if a workflow+ecosystem+model combination is only available in the new generation form.
+ * Returns true if the legacy form does NOT support this combination.
+ */
+export function isNewFormOnly(
+  workflowKey: string,
+  ecosystemId?: number,
+  modelId?: number
+): boolean {
+  const entry = NEW_FORM_ONLY.get(workflowKey);
+  if (entry === undefined) return false;
+  if (entry === true) return true;
+  if (ecosystemId === undefined) return false;
+  return entry(ecosystemId, modelId);
+}
+
+// =============================================================================
 // Workflow Groups (Mode Switching)
 // =============================================================================
 

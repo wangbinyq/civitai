@@ -13,7 +13,6 @@ import {
   clipSkipNode,
   createCheckpointGraph,
   denoiseNode,
-  enhancedCompatibilityNode,
   imagesNode,
   negativePromptNode,
   resourcesNode,
@@ -99,7 +98,6 @@ export const stableDiffusionGraph = new DataGraph<
   .node('steps', stepsNode())
   .node('clipSkip', clipSkipNode())
   .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode())
   // Denoise is shown for face-fix/hires-fix (always) or img2img/txt2img when images are present
   // Max is 0.75 when no images (text-only), 1.0 when images are present
   .node(

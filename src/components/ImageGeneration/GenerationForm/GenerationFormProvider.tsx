@@ -56,7 +56,11 @@ import { zImageSampleMethods, zImageSchedules } from '~/shared/orchestrator/Imag
 import { getIsQwenImageEditModel } from '~/shared/orchestrator/ImageGen/qwen.config';
 import type { BaseModelGroup } from '~/shared/constants/base-model.constants';
 import { getGenerationBaseModelAssociatedGroups } from '~/shared/constants/base-model.constants';
+import { ecosystemByKey } from '~/shared/constants/basemodel.constants';
 import { imageAnnotationsSchema } from '~/components/Generation/Input/DrawingEditor/drawing.utils';
+import { isNewFormOnly } from '~/shared/data-graph/generation/config/workflows';
+import { openSwitchToNewFormModal } from '~/components/generation_v2/SwitchToNewFormModal';
+import { useLegacyGeneratorStore } from '~/store/legacy-generator.store';
 
 // #region [schemas]
 
@@ -349,9 +353,32 @@ export function GenerationFormProvider({
   useEffect(() => {
     // Only process if counter changed (new data)
     if (storeCounter === prevCounterRef.current || !storeData) return;
-    prevCounterRef.current = storeCounter;
 
     const { runType, remixOfId, resources: graphResources, params: graphParams } = storeData;
+
+    // Check if this data requires the new generation form
+    const workflowKey = graphParams.workflow as string | undefined;
+    const ecosystemKey = graphParams.ecosystem as string | undefined;
+    const ecosystemId = ecosystemKey ? ecosystemByKey.get(ecosystemKey)?.id : undefined;
+    const checkpointModelId = (graphResources as { id: number; model: { type: string } }[]).find(
+      (r) => r.model.type === 'Checkpoint'
+    )?.id;
+
+    if (workflowKey && isNewFormOnly(workflowKey, ecosystemId, checkpointModelId)) {
+      prevCounterRef.current = storeCounter;
+      openSwitchToNewFormModal({
+        onConfirm: () => {
+          // Switch to new form — data stays in store for the new provider to pick up
+          useLegacyGeneratorStore.getState().switchToNew();
+        },
+        onCancel: () => {
+          generationGraphStore.clearData();
+        },
+      });
+      return;
+    }
+
+    prevCounterRef.current = storeCounter;
 
     // Legacy form store type sync is handled centrally by syncLegacyFormStore
     // in generation-graph.store.ts (called from setData/open)

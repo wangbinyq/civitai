@@ -15,7 +15,6 @@ import {
   aspectRatioNode,
   cfgScaleNode,
   createCheckpointGraph,
-  enhancedCompatibilityNode,
   resourcesNode,
   seedNode,
   stepsNode,
@@ -97,5 +96,4 @@ export const ponyV7Graph = new DataGraph<{ ecosystem: string; workflow: string }
       defaultValue: 40, // Pony V7 works best with 40+ steps
     })
   )
-  .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode());
+  .node('seed', seedNode());

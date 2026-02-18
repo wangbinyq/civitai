@@ -23,7 +23,6 @@ import {
   aspectRatioNode,
   cfgScaleNode,
   createCheckpointGraph,
-  enhancedCompatibilityNode,
   resourcesNode,
   seedNode,
   stepsNode,
@@ -109,7 +108,7 @@ type FluxModeCtx = {
 
 /**
  * Subgraph with common nodes for standard-like modes.
- * Contains: aspectRatio, cfgScale, steps, seed, enhancedCompatibility
+ * Contains: aspectRatio, cfgScale, steps, seed
  */
 const standardModeBaseGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
@@ -124,10 +123,9 @@ const standardModeBaseGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   )
   .node('steps', stepsNode({ min: 20, max: 50 }))
   .node('seed', seedNode());
-// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 /**
- * Pro mode subgraph: aspectRatio, cfgScale, steps, seed (no resources, no enhancedCompatibility)
+ * Pro mode subgraph: aspectRatio, cfgScale, steps, seed (no resources)
  */
 const proModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
@@ -144,7 +142,7 @@ const proModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('seed', seedNode());
 
 /**
- * Standard/Krea mode subgraph: resources + aspectRatio, cfgScale, steps, seed, enhancedCompatibility
+ * Standard/Krea mode subgraph: resources + aspectRatio, cfgScale, steps, seed
  */
 const standardModeWithResourcesGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .merge(standardModeBaseGraph)
@@ -158,11 +156,10 @@ const standardModeWithResourcesGraph = new DataGraph<FluxModeCtx, GenerationCtx>
     ['ecosystem']
   );
 
-/** Draft mode subgraph: aspectRatio, seed, enhancedCompatibility */
+/** Draft mode subgraph: aspectRatio, seed */
 const draftModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
   .node('seed', seedNode());
-// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 /** Ultra mode subgraph: aspectRatio (different options), fluxUltraRaw, seed */
 const ultraModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
@@ -186,10 +183,10 @@ const ultraModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
  * Note: Flux doesn't use negative prompts, samplers, or CLIP skip.
  *
  * Uses discriminatedUnion on 'fluxMode' computed from model.id:
- * - draft: aspectRatio, seed, enhancedCompatibility
- * - standard: resources, aspectRatio, cfgScale, steps, seed, enhancedCompatibility
- * - krea: resources, aspectRatio, cfgScale, steps, seed, enhancedCompatibility
- * - pro: aspectRatio, cfgScale, steps, seed (no resources, no enhancedCompatibility)
+ * - draft: aspectRatio, seed
+ * - standard: resources, aspectRatio, cfgScale, steps, seed
+ * - krea: resources, aspectRatio, cfgScale, steps, seed
+ * - pro: aspectRatio, cfgScale, steps, seed (no resources)
  * - ultra: aspectRatio (different options), fluxUltraRaw, seed
  *
  * Draft workflow behavior:

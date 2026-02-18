@@ -206,6 +206,26 @@ export async function createEcosystemStepInput(
   };
   const { ecosystem } = normalizedData;
 
+  const step = await createEcosystemStep(normalizedData, handlerCtx);
+
+  // Enhanced compatibility mode: set engine to 'comfyui' for textToImage steps
+  if (
+    step.$type === 'textToImage' &&
+    'enhancedCompatibility' in data &&
+    data.enhancedCompatibility
+  ) {
+    (step as { input: Record<string, unknown> }).input.engine = 'comfyui';
+  }
+
+  return step;
+}
+
+async function createEcosystemStep(
+  normalizedData: EcosystemGraphOutput & { seed: number },
+  handlerCtx: GenerationHandlerCtx
+): Promise<StepInput> {
+  const { ecosystem } = normalizedData;
+
   switch (ecosystem) {
     // =========================================================================
     // Image Ecosystems - textToImage step type

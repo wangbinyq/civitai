@@ -15,6 +15,10 @@
 import { z } from 'zod';
 import { ecosystemById, ecosystemByKey } from '~/shared/constants/basemodel.constants';
 import {
+  EXPERIMENTAL_MODE_SUPPORTED_MODELS,
+  fluxUltraAirId,
+} from '~/shared/constants/generation.constants';
+import {
   getEcosystemsForWorkflow,
   getWorkflowsForEcosystem,
   isWorkflowAvailable,
@@ -23,7 +27,7 @@ import {
 } from './config';
 import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
-import { quantityNode, promptNode } from './common';
+import { quantityNode, promptNode, enhancedCompatibilityNode } from './common';
 import { fluxGraph } from './flux-graph';
 import { stableDiffusionGraph } from './stable-diffusion-graph';
 import { qwenGraph } from './qwen-graph';
@@ -230,6 +234,20 @@ export const ecosystemGraph = new DataGraph<
     { values: ['Sora2'] as const, graph: soraGraph },
     { values: ['Veo3'] as const, graph: veo3Graph },
   ])
+  // Enhanced compatibility mode - only for supported ecosystems, hidden for Flux Ultra
+  .node(
+    'enhancedCompatibility',
+    (ctx) => {
+      const modelId = 'model' in ctx ? ctx.model?.id : undefined;
+      return {
+        ...enhancedCompatibilityNode(),
+        when:
+          EXPERIMENTAL_MODE_SUPPORTED_MODELS.includes(ctx.ecosystem) &&
+          modelId !== fluxUltraAirId,
+      };
+    },
+    ['ecosystem', 'model']
+  )
   .node(
     'prompt',
     (ctx) => {

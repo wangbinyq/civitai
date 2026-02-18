@@ -17,7 +17,6 @@ import {
   aspectRatioNode,
   cfgScaleNode,
   createCheckpointGraph,
-  enhancedCompatibilityNode,
   resourcesNode,
   seedNode,
   stepsNode,
@@ -91,5 +90,4 @@ export const chromaGraph = new DataGraph<{ ecosystem: string; workflow: string }
     })
   )
   .node('steps', stepsNode({ min: 20, max: 50 }))
-  .node('seed', seedNode())
-  .node('enhancedCompatibility', enhancedCompatibilityNode());
+  .node('seed', seedNode());

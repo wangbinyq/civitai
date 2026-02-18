@@ -19,7 +19,6 @@ import {
   aspectRatioNode,
   cfgScaleNode,
   createCheckpointGraph,
-  enhancedCompatibilityNode,
   imagesNode,
   resourcesNode,
   seedNode,
@@ -91,7 +90,7 @@ type Flux2ModeCtx = {
 
 /**
  * Base subgraph with common nodes for all modes.
- * Contains: aspectRatio, cfgScale, steps, seed, enhancedCompatibility
+ * Contains: aspectRatio, cfgScale, steps, seed
  */
 const baseModeGraph = new DataGraph<Flux2ModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: flux2AspectRatios, defaultValue: '1:1' }))
@@ -106,7 +105,6 @@ const baseModeGraph = new DataGraph<Flux2ModeCtx, GenerationCtx>()
   )
   .node('steps', stepsNode({ min: 20, max: 50 }))
   .node('seed', seedNode());
-// .node('enhancedCompatibility', enhancedCompatibilityNode());
 
 /**
  * Dev mode subgraph: resources + base controls
@@ -137,8 +135,8 @@ const noResourcesModeGraph = new DataGraph<Flux2ModeCtx, GenerationCtx>().merge(
  *
  * Meta only contains dynamic props - static props like label are in components.
  * Uses discriminatedUnion on 'flux2Mode' computed from model.id:
- * - dev: resources, aspectRatio, cfgScale, steps, seed, enhancedCompatibility
- * - flex/pro/max: aspectRatio, cfgScale, steps, seed, enhancedCompatibility (no resources)
+ * - dev: resources, aspectRatio, cfgScale, steps, seed
+ * - flex/pro/max: aspectRatio, cfgScale, steps, seed (no resources)
  *
  * Note: Flux.2 doesn't use negative prompts, samplers, or CLIP skip.
  */

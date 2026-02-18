@@ -31,6 +31,10 @@ import { LightricksFormInput } from '~/components/Generation/Video/LightricksFor
 import { Ltx2FormInput } from '~/components/Generation/Video/Ltx2FormInput';
 import { Veo3FormInput } from '~/components/Generation/Video/Veo3FormInput';
 import { generationGraphStore, useGenerationGraphStore } from '~/store/generation-graph.store';
+import { isNewFormOnly } from '~/shared/data-graph/generation/config/workflows';
+import { ecosystemByKey } from '~/shared/constants/basemodel.constants';
+import { openSwitchToNewFormModal } from '~/components/generation_v2/SwitchToNewFormModal';
+import { useLegacyGeneratorStore } from '~/store/legacy-generator.store';
 import { GenForm } from '~/components/Generation/Form/GenForm';
 import { StepProvider } from '~/components/Generation/Providers/StepProvider';
 import { useDebouncer } from '~/utils/debouncer';
@@ -183,6 +187,26 @@ export function VideoGenerationForm({ engine }: { engine: OrchestratorEngine2 })
   useEffect(() => {
     if (storeData && config) {
       const { params, resources, runType } = storeData;
+
+      // Check if this data requires the new generation form
+      const workflowKey = params.workflow as string | undefined;
+      const ecosystemKey = params.ecosystem as string | undefined;
+      const ecosystemId = ecosystemKey ? ecosystemByKey.get(ecosystemKey)?.id : undefined;
+      const checkpointModelId = (resources as { id: number; model: { type: string } }[]).find(
+        (r) => r.model.type === 'Checkpoint'
+      )?.id;
+      if (workflowKey && isNewFormOnly(workflowKey, ecosystemId, checkpointModelId)) {
+        openSwitchToNewFormModal({
+          onConfirm: () => {
+            useLegacyGeneratorStore.getState().switchToNew();
+          },
+          onCancel: () => {
+            generationGraphStore.clearData();
+          },
+        });
+        return;
+      }
+
       // Store params are in graph format (workflow, ecosystem, wanVersion).
       // Convert to legacy format (process, engine, version) for softValidate.
       let data = mapGraphToLegacyParams(params);
