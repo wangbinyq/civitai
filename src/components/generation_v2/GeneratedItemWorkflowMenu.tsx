@@ -17,7 +17,6 @@ import {
   IconInfoHexagon,
   IconPlayerTrackNextFilled,
   IconTrash,
-  IconAlertTriangle,
   IconDiamond,
 } from '@tabler/icons-react';
 
@@ -193,12 +192,6 @@ export function GeneratedItemWorkflowMenu({
                     compatible: workflow.compatible,
                     isLightbox,
                   })
-                }
-                className={!workflow.compatible ? 'opacity-60' : undefined}
-                rightSection={
-                  !workflow.compatible ? (
-                    <IconAlertTriangle size={14} className="text-yellow-5" />
-                  ) : undefined
                 }
               >
                 <Text size="sm">{workflow.label}</Text>

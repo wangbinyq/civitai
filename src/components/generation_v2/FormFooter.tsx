@@ -138,17 +138,14 @@ function PriorityAlertSpace({
         {submitError}
       </Notification>
     );
-  } else {
-    priorityAlert = <QueueSnackbar />;
   }
 
   return (
     <>
       {dailyBoost.canShow ? (
         <DailyBoostRewardClaim />
-      ) : membershipUpsell.canShow ? (
-        <MembershipUpsell />
       ) : null}
+      <QueueSnackbar />
       {priorityAlert}
     </>
   );

@@ -13,6 +13,7 @@ import { Alert, List, Text } from '@mantine/core';
 import { useUnstableResources } from '~/components/ImageGeneration/GenerationForm/generation.utils';
 import { ecosystemByKey, isEcosystemExperimental } from '~/shared/constants/basemodel.constants';
 import { useWhatIfContext } from './WhatIfProvider';
+import { DismissibleAlert } from '~/components/DismissibleAlert/DismissibleAlert';
 
 // =============================================================================
 // Types
@@ -169,12 +170,12 @@ export function ExperimentalModelAlert({ ecosystem }: ExperimentalModelAlertProp
   const displayName = ecoRecord?.displayName ?? ecosystem;
 
   return (
-    <Alert color="yellow" title="Experimental Build" radius="md">
+    <DismissibleAlert color="yellow" title="Experimental Build" radius="md" id={ecosystem}>
       <Text size="xs">
         {displayName} support is currently in an experimental phase. Some features may not work as
         expected. Please report any issues you encounter.
       </Text>
-    </Alert>
+    </DismissibleAlert>
   );
 }
 

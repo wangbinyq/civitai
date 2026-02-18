@@ -14,7 +14,6 @@ import {
   IconCheck,
   IconPhoto,
   IconVideo,
-  IconArrowRight,
   IconDiamond,
 } from '@tabler/icons-react';
 import clsx from 'clsx';
@@ -158,7 +157,7 @@ function WorkflowMenuItem({
     >
       <Group gap="sm" wrap="nowrap" justify="space-between">
         <div className="min-w-0 flex-1">
-          <Text size="sm" fw={isSelected ? 600 : 400} c={!isCompatible ? 'dimmed' : undefined}>
+          <Text size="sm" fw={isSelected ? 600 : 400}>
             {workflow.label}
           </Text>
           {workflow.description && (
@@ -168,9 +167,6 @@ function WorkflowMenuItem({
           )}
         </div>
         {isSelected && <IconCheck size={16} className="shrink-0 text-blue-6" />}
-        {!isCompatible && !isSelected && (
-          <IconArrowRight size={14} className="shrink-0 text-gray-4 dark:text-dark-3" />
-        )}
       </Group>
     </UnstyledButton>
   );

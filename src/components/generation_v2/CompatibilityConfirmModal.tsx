@@ -34,6 +34,8 @@ export type PendingChange =
       compatibleEcosystemIds: number[];
       /** Pre-selected ecosystem key (from last-used or default) */
       defaultEcosystemKey: string;
+      /** Whether the current ecosystem is incompatible with the selected workflow */
+      incompatible?: boolean;
     }
   | {
       type: 'ecosystem';
@@ -194,24 +196,28 @@ function CompatibilityConfirmModalContent({
     <Modal
       {...dialog}
       onClose={dialog.onClose}
-      title={isWorkflowChange ? 'Change ecosystem?' : 'Change workflow?'}
+      title={
+        isWorkflowChange
+          ? pendingChange.incompatible
+            ? 'Change ecosystem?'
+            : 'Select ecosystem'
+          : 'Change workflow?'
+      }
       size="sm"
       centered
     >
       <Stack gap="md">
-        <Text size="sm">
-          {isWorkflowChange ? (
-            <>
-              <strong>{workflowLabel}</strong> is not available for{' '}
-              <strong>{currentEcoLabel}</strong>. Select a compatible ecosystem:
-            </>
-          ) : (
-            <>
-              <strong>{ecosystemLabel}</strong> doesn&apos;t support{' '}
-              <strong>{currentWorkflowLabel}</strong>.
-            </>
-          )}
-        </Text>
+        {isWorkflowChange && pendingChange.incompatible ? (
+          <Text size="sm">
+            <strong>{workflowLabel}</strong> is not available for{' '}
+            <strong>{currentEcoLabel}</strong>. Select a compatible ecosystem:
+          </Text>
+        ) : !isWorkflowChange ? (
+          <Text size="sm">
+            <strong>{ecosystemLabel}</strong> doesn&apos;t support{' '}
+            <strong>{currentWorkflowLabel}</strong>.
+          </Text>
+        ) : null}
 
         {isWorkflowChange ? (
           <Radio.Group value={selectedEcosystemKey} onChange={setSelectedEcosystemKey}>

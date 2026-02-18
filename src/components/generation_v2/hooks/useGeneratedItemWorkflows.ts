@@ -312,8 +312,10 @@ async function openEnhancementModal(
 }
 
 /**
- * Apply a workflow to the form with a compatibility check.
- * Shows confirmation modal for incompatible workflows before proceeding.
+ * Apply a workflow to the form with ecosystem selection.
+ * For non-enhancement workflows, always shows an ecosystem selection modal
+ * so the user can choose which ecosystem to use. Incompatible ecosystems
+ * show a warning message; compatible ones just show the picker.
  * For legacy generator users, opens dedicated modals for enhancement workflows.
  */
 export async function applyWorkflowWithCheck({
@@ -341,48 +343,60 @@ export async function applyWorkflowWithCheck({
   if (isLightbox) dialogStore.closeById('generated-image');
 
   const isCrossMedia = isCrossMediaWorkflow(image, workflowId);
-  const isStandalone = (workflowConfigByKey.get(workflowId)?.ecosystemIds.length ?? 0) === 0;
+  const config = workflowConfigByKey.get(workflowId);
+  const isStandalone = (config?.ecosystemIds.length ?? 0) === 0;
+  const isEnhancement = config?.enhancement === true;
 
-  // Show confirmation modal for incompatible same-media workflows
-  if (!compatible && ecosystemKey) {
+  // Enhancement and standalone workflows: apply directly (no ecosystem choice needed)
+  if (isEnhancement || isStandalone) {
+    applyWorkflowToForm({
+      workflowId,
+      image,
+      step,
+      ecosystem: getTargetEcosystemKey(workflowId, ecosystemKey, isCrossMedia, aliasEcosystemIds),
+      clearResources: isStandalone || isCrossMedia,
+    });
+    return;
+  }
+
+  // All other workflows: show ecosystem selection modal
+  const compatibleIds = getEcosystemsForWorkflow(workflowId);
+
+  // Determine default ecosystem key
+  let defaultKey: string;
+  if (compatible && ecosystemKey) {
+    // Current ecosystem is compatible — pre-select it
+    defaultKey = ecosystemKey;
+  } else {
+    // Incompatible — use stored preference or first valid ecosystem
     const storedPref = workflowPreferences.getPreferredEcosystem(workflowId);
     const storedEco = storedPref ? ecosystemByKey.get(storedPref) : undefined;
     const target = storedEco
-      ? { key: storedEco.key, displayName: storedEco.displayName }
+      ? { key: storedEco.key }
       : getValidEcosystemForWorkflow(workflowId, ecosystemKey);
-
-    if (target) {
-      const compatibleIds = getEcosystemsForWorkflow(workflowId);
-      openCompatibilityConfirmModal({
-        pendingChange: {
-          type: 'workflow',
-          value: workflowId,
-          optionId: workflowId,
-          currentEcosystem: ecosystemKey,
-          compatibleEcosystemIds: compatibleIds,
-          defaultEcosystemKey: target.key,
-        },
-        onConfirm: (selectedEcosystemKey) =>
-          applyWorkflowToForm({
-            workflowId,
-            image,
-            step,
-            ecosystem: selectedEcosystemKey ?? target.key,
-            clearResources: true,
-          }),
-      });
-      return;
-    }
+    defaultKey = target?.key ?? ecosystemById.get(compatibleIds[0])?.key ?? '';
   }
 
-  // Clear resources when switching ecosystems (cross-media, incompatible, or standalone)
-  const clearResources = isStandalone || isCrossMedia || !compatible;
-
-  applyWorkflowToForm({
-    workflowId,
-    image,
-    step,
-    ecosystem: getTargetEcosystemKey(workflowId, ecosystemKey, isCrossMedia, aliasEcosystemIds),
-    clearResources,
+  openCompatibilityConfirmModal({
+    pendingChange: {
+      type: 'workflow',
+      value: workflowId,
+      optionId: rawWorkflowId,
+      currentEcosystem: ecosystemKey ?? '',
+      compatibleEcosystemIds: compatibleIds,
+      defaultEcosystemKey: defaultKey,
+      incompatible: !compatible,
+    },
+    onConfirm: (selectedEcosystemKey) => {
+      const targetEco = selectedEcosystemKey ?? defaultKey;
+      const ecosystemChanged = targetEco !== ecosystemKey;
+      applyWorkflowToForm({
+        workflowId,
+        image,
+        step,
+        ecosystem: targetEco,
+        clearResources: isCrossMedia || ecosystemChanged,
+      });
+    },
   });
 }

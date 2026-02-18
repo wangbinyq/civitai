@@ -154,8 +154,8 @@ export const workflowConfigs: WorkflowConfigs = {
   },
 
   img2img: {
-    label: 'Image to Image',
-    description: 'Generate an image from an existing image',
+    label: 'Image Variations',
+    description: 'Generate a variation of an existing image',
     category: 'image',
     ecosystemIds: SD_FAMILY_IDS,
   },
