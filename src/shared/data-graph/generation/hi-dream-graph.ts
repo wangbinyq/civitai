@@ -20,13 +20,12 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   negativePromptNode,
   resourcesNode,
   samplerNode,
   seedNode,
-  stepsNode,
+  sliderNode,
   type VersionGroup,
   type ResourceData,
 } from './common';
@@ -96,19 +95,11 @@ const fullModeGraph = new DataGraph<HiDreamVariantCtx, GenerationCtx>()
   )
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 1,
-      max: 20,
-      defaultValue: 5,
-    })
+    sliderNode({ min: 1, max: 20, defaultValue: 5 })
   )
   .node(
     'steps',
-    stepsNode({
-      min: 20,
-      max: 100,
-      defaultValue: 50,
-    })
+    sliderNode({ min: 20, max: 100, defaultValue: 50 })
   )
   .node('seed', seedNode());
 

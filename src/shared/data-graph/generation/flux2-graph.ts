@@ -17,12 +17,11 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   imagesNode,
   resourcesNode,
   seedNode,
-  stepsNode,
+  sliderNode,
   type ResourceData,
 } from './common';
 
@@ -96,14 +95,9 @@ const baseModeGraph = new DataGraph<Flux2ModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: flux2AspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 2,
-      max: 20,
-      defaultValue: 3.5,
-      presets: flux2GuidancePresets,
-    })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: flux2GuidancePresets })
   )
-  .node('steps', stepsNode({ min: 20, max: 50 }))
+  .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());
 
 /**

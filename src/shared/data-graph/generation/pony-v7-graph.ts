@@ -13,11 +13,10 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   resourcesNode,
   seedNode,
-  stepsNode,
+  sliderNode,
 } from './common';
 
 // =============================================================================
@@ -81,19 +80,10 @@ export const ponyV7Graph = new DataGraph<{ ecosystem: string; workflow: string }
   .node('aspectRatio', aspectRatioNode({ options: ponyV7AspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 2,
-      max: 20,
-      defaultValue: 3.5,
-      presets: ponyV7GuidancePresets,
-    })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: ponyV7GuidancePresets })
   )
   .node(
     'steps',
-    stepsNode({
-      min: 20,
-      max: 50,
-      defaultValue: 40, // Pony V7 works best with 40+ steps
-    })
+    sliderNode({ min: 20, max: 50, defaultValue: 40 }) // Pony V7 works best with 40+ steps
   )
   .node('seed', seedNode());

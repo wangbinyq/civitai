@@ -17,7 +17,6 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   imagesNode,
   negativePromptNode,
@@ -25,7 +24,7 @@ import {
   samplerNode,
   schedulerNode,
   seedNode,
-  stepsNode,
+  sliderNode,
 } from './common';
 
 // =============================================================================
@@ -113,7 +112,7 @@ const distilledModeGraph = new DataGraph<Flux2KleinModeCtx, GenerationCtx>()
   )
   .node('aspectRatio', aspectRatioNode({ options: flux2KleinAspectRatios, defaultValue: '1:1' }))
   .node('negativePrompt', negativePromptNode())
-  .node('steps', stepsNode({ min: 4, max: 12, defaultValue: 8 }))
+  .node('steps', sliderNode({ min: 4, max: 12, defaultValue: 8 }))
   .node('seed', seedNode());
 
 /**
@@ -134,8 +133,8 @@ const baseModeGraph = new DataGraph<Flux2KleinModeCtx, GenerationCtx>()
   .node('negativePrompt', negativePromptNode())
   .node('sampler', samplerNode({ options: flux2KleinSamplers, defaultValue: 'euler' }))
   .node('scheduler', schedulerNode({ options: flux2KleinSchedules, defaultValue: 'simple' }))
-  .node('cfgScale', cfgScaleNode({ min: 2, max: 20, defaultValue: 7 }))
-  .node('steps', stepsNode({ min: 20, max: 50, defaultValue: 30 }))
+  .node('cfgScale', sliderNode({ min: 2, max: 20, defaultValue: 7 }))
+  .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 30 }))
   .node('seed', seedNode());
 
 // =============================================================================

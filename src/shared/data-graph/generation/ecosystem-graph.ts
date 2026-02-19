@@ -95,7 +95,7 @@ export const ecosystemGraph = new DataGraph<
       const outputDefault = ctx.output === 'video' ? 'Kling' : 'ZImageTurbo';
       const defaultValue = compatibleEcosystems.includes(outputDefault)
         ? outputDefault
-        : (compatibleEcosystems[0] ?? 'SDXL');
+        : compatibleEcosystems[0] ?? 'SDXL';
 
       return {
         input: z.string().optional(),
@@ -242,8 +242,7 @@ export const ecosystemGraph = new DataGraph<
       return {
         ...enhancedCompatibilityNode(),
         when:
-          EXPERIMENTAL_MODE_SUPPORTED_MODELS.includes(ctx.ecosystem) &&
-          modelId !== fluxUltraAirId,
+          EXPERIMENTAL_MODE_SUPPORTED_MODELS.includes(ctx.ecosystem) && modelId !== fluxUltraAirId,
       };
     },
     ['ecosystem', 'model']
@@ -252,9 +251,10 @@ export const ecosystemGraph = new DataGraph<
     'prompt',
     (ctx) => {
       const images = 'images' in ctx ? (ctx.images as unknown[]) : undefined;
-      return promptNode({ required: !images?.length });
+      const multiShot = 'multiShot' in ctx ? (ctx.multiShot as boolean) : false;
+      return { ...promptNode({ required: !images?.length }), when: !multiShot };
     },
-    ['images']
+    ['images', 'multiShot']
   )
   .computed(
     'triggerWords',

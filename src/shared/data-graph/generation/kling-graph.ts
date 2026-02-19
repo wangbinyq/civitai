@@ -33,10 +33,10 @@
  * - mode: Generation mode (standard/professional)
  * - duration: Video duration (5 or 10 seconds)
  * - aspectRatio: Output aspect ratio (txt2vid and ref2vid only)
- * - elements: Reference elements for reference-to-video (needs custom component)
+ * - multiShot: Toggle for multi-segment generation (img2vid + ref2vid)
+ * - klingElements: Per-segment elements with frontalImage/video/prompt (when multiShot)
  * - generateAudio: Toggle for audio generation
  * - keepAudio: Toggle to preserve source audio (vid2vid only)
- * - multiPrompt: Multi-segment prompt editor (needs custom component)
  */
 
 import z from 'zod';
@@ -46,7 +46,7 @@ import {
   seedNode,
   negativePromptNode,
   aspectRatioNode,
-  cfgScaleNode,
+  sliderNode,
   enumNode,
   imagesNode,
   createCheckpointGraph,
@@ -70,10 +70,10 @@ const klingVersionIds = {
 
 /** Options for Kling model selector */
 const klingVersionOptions = [
-  { label: 'Kling V1.6', value: klingVersionIds.v1_6 },
-  { label: 'Kling V2', value: klingVersionIds.v2 },
-  { label: 'Kling V2.5 Turbo', value: klingVersionIds.v2_5_turbo },
-  { label: 'Kling V3', value: klingVersionIds.v3 },
+  { label: 'V1.6', value: klingVersionIds.v1_6 },
+  { label: 'V2', value: klingVersionIds.v2 },
+  { label: 'V2.5 Turbo', value: klingVersionIds.v2_5_turbo },
+  { label: 'V3', value: klingVersionIds.v3 },
 ];
 
 /** Kling aspect ratio options */
@@ -110,17 +110,17 @@ export type KlingV3Operation =
   | 'video-to-video-edit'
   | 'video-to-video-reference';
 
-/** V3 element input shape — images and video stored as rich objects (reuses schemas from common.ts) */
+/**
+ * V3 multi-shot element: one segment of a multi-shot generation.
+ * Media is optional — a segment may contain just a prompt.
+ * Elements with media appear in the API's elements[] array and get an @ElementN prefix
+ * in their multiPrompt entry. Prompt-only elements appear only in multiPrompt.
+ */
 const klingV3ElementSchema = z.object({
-  frontalImage: imageValueSchema.nullable().optional(),
-  referenceImages: z.array(imageValueSchema).optional(),
+  frontalImage: imageValueSchema.optional(),
+  referenceImages: z.array(imageValueSchema).max(3).optional(),
   videoUrl: videoValueSchema.nullable().optional(),
-});
-
-/** V3 multi-prompt segment shape (matches KlingV3MultiPrompt from @civitai/client) */
-const klingV3MultiPromptSchema = z.object({
-  prompt: z.string(),
-  duration: z.number().optional(),
+  prompt: z.string().optional(),
 });
 
 // =============================================================================
@@ -214,7 +214,7 @@ const klingLegacyGraph = new DataGraph<KlingVersionCtx, GenerationCtx>()
   // CFG scale node
   .node(
     'cfgScale',
-    cfgScaleNode({
+    sliderNode({
       min: 0.1,
       max: 1,
       step: 0.1,
@@ -259,16 +259,47 @@ const klingV3Graph = new DataGraph<KlingVersionCtx, GenerationCtx>()
   // Computed operation from workflow
   .computed('operation', (ctx): KlingV3Operation => getV3Operation(ctx.workflow), ['workflow'])
 
+  // MultiShot toggle - enables multi-segment generation with per-element media + prompt.
+  // TODO: Re-enable when multi-shot is ready for production (set when: ctx.workflow === 'img2vid')
+  .node(
+    'multiShot',
+    (_ctx) => ({
+      input: z.boolean().optional(),
+      output: z.boolean(),
+      defaultValue: false,
+      when: false,
+    }),
+    []
+  )
+
+  // KlingElements - multi-shot elements, each with frontalImage (required), optional
+  // referenceImages/videoUrl, and a prompt segment.
+  // Declared before images so ctx.klingElements is typed when images reads it.
+  .node(
+    'klingElements',
+    (ctx) => ({
+      input: z.array(klingV3ElementSchema).max(5).optional(),
+      output: z.array(klingV3ElementSchema).max(5).optional(),
+      defaultValue: [] as z.infer<typeof klingV3ElementSchema>[],
+      when: ctx.multiShot === true && ctx.workflow === 'img2vid',
+    }),
+    ['multiShot', 'workflow']
+  )
+
   // Images node - workflow-dependent config
   // V3 img2vid supports start + end image via slots
-  // V3 ref2vid uses multiple reference images
+  // V3 ref2vid uses multiple reference images; hidden when multiShot is active
+  //   (klingElements provides reference media in that case)
   .node(
     'images',
     (ctx) => {
       if (ctx.workflow === 'img2vid') {
         return {
           ...imagesNode({
-            slots: [{ label: 'Start Image', required: true }, { label: 'End Image' }],
+            slots: [
+              { label: 'Start Image', required: true },
+              { label: 'End Image', disabled: ctx.multiShot === true },
+            ],
           }),
           when: true,
         };
@@ -276,13 +307,25 @@ const klingV3Graph = new DataGraph<KlingVersionCtx, GenerationCtx>()
       if (ctx.workflow === 'img2vid:ref2vid') {
         return {
           ...imagesNode({ max: 7 }),
-          when: true,
+          when: ctx.multiShot !== true,
         };
       }
       // txt2vid — hide images
       return { ...imagesNode(), when: false };
     },
-    ['workflow']
+    ['workflow', 'multiShot']
+  )
+
+  // Effect: When multiShot is enabled on img2vid, clear the End Image slot value.
+  // The slot is disabled in that mode, so any stored value should be removed.
+  .effect(
+    (ctx, _ext, set) => {
+      if (ctx.workflow !== 'img2vid' || ctx.multiShot !== true) return;
+      if (ctx.images && ctx.images.length > 1) {
+        set('images', [ctx.images[0]]);
+      }
+    },
+    ['multiShot', 'images']
   )
 
   // Seed node
@@ -291,8 +334,13 @@ const klingV3Graph = new DataGraph<KlingVersionCtx, GenerationCtx>()
   // Mode (standard/professional) - always available in V3
   .node('mode', enumNode({ options: klingModes, defaultValue: 'standard' }))
 
-  // Duration (5 or 10 seconds)
-  .node('duration', enumNode({ options: klingDurations, defaultValue: '5' }))
+  // Duration — slider from 5 to 15 seconds
+  .node('duration', {
+    input: z.coerce.number().min(5).max(15).optional(),
+    output: z.number().min(5).max(15),
+    defaultValue: 5,
+    meta: { min: 5, max: 15, step: 1 },
+  })
 
   // Aspect ratio - for text-to-video and reference-to-video
   .node(
@@ -304,47 +352,15 @@ const klingV3Graph = new DataGraph<KlingVersionCtx, GenerationCtx>()
     ['workflow']
   )
 
-  // Elements - reference elements for reference-to-video operations
-  // TODO: Needs custom KlingElementsEditor component
-  // Each element can have: frontalImage (face ref), referenceImages, videoUrl
-  .node(
-    'elements',
-    (ctx) => ({
-      input: z.array(klingV3ElementSchema).optional(),
-      output: z
-        .array(klingV3ElementSchema)
-        .transform((elems) =>
-          elems.map((elem) => removeEmpty(elem)).filter((elem) => Object.keys(elem).length > 0)
-        )
-        .optional(),
-      defaultValue: [] as z.infer<typeof klingV3ElementSchema>[],
-      when: ctx.workflow === 'img2vid:ref2vid',
-    }),
-    ['workflow']
-  )
-
   // Generate audio toggle
   .node('generateAudio', {
     input: z.boolean().optional(),
     output: z.boolean(),
     defaultValue: false,
-  })
-
-  // TODO: Add keepAudio node when vid2vid workflows are available
-  // keepAudio: boolean toggle to preserve source audio in vid2vid operations
-
-  // Multi-prompt - multiple prompt segments with individual durations
-  // TODO: Needs custom MultiPromptEditor component
-  .node('multiPrompt', {
-    input: z.array(klingV3MultiPromptSchema).nullable().optional(),
-    output: z
-      .array(klingV3MultiPromptSchema)
-      .transform((elems) =>
-        elems.map((elem) => removeEmpty(elem)).filter((elem) => Object.keys(elem).length > 0)
-      )
-      .nullable(),
-    defaultValue: null,
   });
+
+// TODO: Add keepAudio node when vid2vid workflows are available
+// keepAudio: boolean toggle to preserve source audio in vid2vid operations
 
 // =============================================================================
 // Kling Graph (root)
@@ -422,5 +438,4 @@ export {
   klingVersionOptions,
   klingVersionIds,
   klingV3ElementSchema,
-  klingV3MultiPromptSchema,
 };

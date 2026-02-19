@@ -16,13 +16,12 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   resourcesNode,
   samplerNode,
   schedulerNode,
   seedNode,
-  stepsNode,
+  sliderNode,
 } from './common';
 
 // =============================================================================
@@ -93,20 +92,11 @@ const turboModeGraph = new DataGraph<ZImageModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: zImageAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 1,
-      max: 2,
-      step: 0.1,
-      defaultValue: 1,
-    })
+    sliderNode({ min: 1, max: 2, step: 0.1, defaultValue: 1 })
   )
   .node(
     'steps',
-    stepsNode({
-      min: 1,
-      max: 15,
-      defaultValue: 9,
-    })
+    sliderNode({ min: 1, max: 15, defaultValue: 9 })
   )
   .node('seed', seedNode());
 
@@ -129,20 +119,11 @@ const baseModeGraph = new DataGraph<ZImageModeCtx, GenerationCtx>()
   .node('scheduler', schedulerNode({ options: zImageSchedules, defaultValue: 'simple' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 1,
-      max: 10,
-      step: 0.5,
-      defaultValue: 4,
-    })
+    sliderNode({ min: 1, max: 10, step: 0.5, defaultValue: 4 })
   )
   .node(
     'steps',
-    stepsNode({
-      min: 1,
-      max: 50,
-      defaultValue: 20,
-    })
+    sliderNode({ min: 1, max: 50, defaultValue: 20 })
   )
   .node('seed', seedNode());
 

@@ -18,8 +18,7 @@ import type { GenerationCtx } from './context';
 import {
   seedNode,
   aspectRatioNode,
-  cfgScaleNode,
-  stepsNode,
+  sliderNode,
   enumNode,
   imagesNode,
   resourcesNode,
@@ -81,7 +80,7 @@ export const ltxv2Graph = new DataGraph<LTXV2Ctx, GenerationCtx>()
   // CFG scale node
   .node(
     'cfgScale',
-    cfgScaleNode({
+    sliderNode({
       min: 1,
       max: 10,
       step: 0.5,
@@ -100,10 +99,9 @@ export const ltxv2Graph = new DataGraph<LTXV2Ctx, GenerationCtx>()
   // Steps node
   .node(
     'steps',
-    stepsNode({
+    sliderNode({
       min: 10,
       max: 50,
-      step: 1,
       defaultValue: 30,
       presets: [
         { label: 'Fast', value: 20 },

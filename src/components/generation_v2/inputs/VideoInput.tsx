@@ -30,6 +30,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { EdgeVideo } from '~/components/EdgeMedia/EdgeVideo';
 import { isOrchestratorUrl, maxVideoFileSize } from '~/server/common/constants';
 import { VIDEO_MIME_TYPE } from '~/shared/constants/mime-types';
+import { TimeSpan } from '@civitai/client';
 import { trpc } from '~/utils/trpc';
 import { getVideoData } from '~/utils/media-preprocessors';
 import { formatBytes } from '~/utils/number-helpers';
@@ -143,7 +144,7 @@ export function VideoInput({
       fps: serverMetadata.fps,
       width: videoDimensions.width,
       height: videoDimensions.height,
-      duration: Number(serverMetadata.duration) || 0,
+      duration: serverMetadata.duration ? new TimeSpan(serverMetadata.duration as string).totalSeconds : 0,
     };
 
     // Only update if metadata changed
@@ -377,7 +378,7 @@ export function VideoInput({
                     Drag a video here or click to select
                   </Text>
                   <Text size="xs" c="dimmed">
-                    MP4, WebM, MOV supported (max {formatBytes(maxVideoFileSize)})
+                    MP4, WebM supported (max {formatBytes(maxVideoFileSize)})
                   </Text>
                 </>
               )}

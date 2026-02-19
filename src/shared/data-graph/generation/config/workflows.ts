@@ -12,7 +12,12 @@
  *   img2vid           - image to video
  */
 
-import { ECO, ecosystemByKey, ecosystemById } from '~/shared/constants/basemodel.constants';
+import {
+  ECO,
+  ecosystemByKey,
+  ecosystemById,
+  getEcosystemSupport,
+} from '~/shared/constants/basemodel.constants';
 import {
   type WorkflowCategory,
   type WorkflowConfig,
@@ -81,7 +86,6 @@ const TXT2IMG_IDS = [
 const TXT2VID_IDS = [
   ECO.HyV1,
   ECO.LTXV2,
-  ECO.WanVideo,
   ECO.WanVideo14B_T2V,
   ECO.WanVideo22_TI2V_5B,
   ECO.WanVideo22_T2V_A14B,
@@ -89,10 +93,10 @@ const TXT2VID_IDS = [
   ECO.Veo3,
   ECO.Sora2,
   ECO.Vidu,
-  ECO.MiniMax,
+  // ECO.MiniMax,
   ECO.Kling,
-  ECO.Haiper,
-  ECO.Lightricks,
+  // ECO.Haiper,
+  // ECO.Lightricks,
 ];
 
 /** I2V-only Wan ecosystems (no T2V support) — added to video:create with required images */
@@ -105,7 +109,6 @@ const I2V_ONLY_IDS = [
 
 /** All Wan ecosystem IDs (T2V + I2V) — used for workflow group overrides */
 const WAN_ALL_IDS = [
-  ECO.WanVideo,
   ECO.WanVideo14B_T2V,
   ECO.WanVideo22_TI2V_5B,
   ECO.WanVideo22_T2V_A14B,
@@ -590,4 +593,60 @@ export function getValidEcosystemForWorkflow(
     }
   }
   return undefined;
+}
+
+// =============================================================================
+// Workflow ↔ Generation Support Validation
+// =============================================================================
+
+/**
+ * Dev-time validation: logs ecosystem IDs referenced in workflow configs that
+ * lack generation support in basemodel.constants, and vice versa.
+ */
+if (process.env.NODE_ENV === 'development') {
+  // Collect all non-standalone ecosystem IDs from workflow configs
+  const workflowEcoIds = new Set<number>();
+  for (const w of workflowConfigsArray) {
+    for (const id of w.ecosystemIds) workflowEcoIds.add(id);
+    if (w.aliases) {
+      for (const alias of w.aliases) {
+        for (const id of alias.ecosystemIds) workflowEcoIds.add(id);
+      }
+    }
+  }
+
+  // Check: in workflow configs but missing generation support
+  const missingSupport: string[] = [];
+  for (const id of workflowEcoIds) {
+    const eco = ecosystemById.get(id);
+    if (!eco) {
+      missingSupport.push(`ID ${id} (not found in ecosystems)`);
+      continue;
+    }
+    if (!getEcosystemSupport(eco.id, 'generation')) {
+      missingSupport.push(`${eco.key} (ID ${id})`);
+    }
+  }
+
+  // Check: has generation support but not in any workflow config
+  const missingWorkflow: string[] = [];
+  for (const [id, eco] of ecosystemById) {
+    if (!getEcosystemSupport(id, 'generation')) continue;
+    if (!workflowEcoIds.has(id)) {
+      missingWorkflow.push(`${eco.key} (ID ${id})`);
+    }
+  }
+
+  if (missingSupport.length) {
+    console.warn(
+      `[workflow-validation] Ecosystems in workflow configs WITHOUT generation support:\n` +
+        missingSupport.map((s) => `  - ${s}`).join('\n')
+    );
+  }
+  if (missingWorkflow.length) {
+    console.warn(
+      `[workflow-validation] Ecosystems with generation support NOT in any workflow config:\n` +
+        missingWorkflow.map((s) => `  - ${s}`).join('\n')
+    );
+  }
 }

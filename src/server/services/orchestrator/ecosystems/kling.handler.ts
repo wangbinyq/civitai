@@ -71,8 +71,56 @@ function createV3Input(data: KlingCtx): KlingV3VideoGenInput {
   const hasImages = !!data.images?.length;
   const isRef2Vid = 'operation' in data && data.operation === 'reference-to-video';
 
+  // klingElements: split into elements[] (media segments) and multiPrompt[] (all segments).
+  // Only segments with media appear in elements[]. Each such segment gets an @ElementN reference
+  // prepended to its multiPrompt entry so the model knows which media to use for that segment.
+  const klingElements =
+    'klingElements' in data
+      ? (data.klingElements as Array<{
+          frontalImage?: { url: string };
+          referenceImages?: Array<{ url: string }>;
+          videoUrl?: { url: string } | null;
+          prompt?: string;
+        }>)
+      : undefined;
+  const hasKlingElements = !!klingElements?.length;
+
+  let elementsArray: ReturnType<typeof removeEmpty>[] | undefined;
+  let multiPromptArray: { prompt: string }[] | undefined;
+
+  if (hasKlingElements) {
+    elementsArray = [];
+    multiPromptArray = [];
+    let elementCounter = 0;
+
+    for (const el of klingElements!) {
+      const hasMedia = el.frontalImage || el.referenceImages?.length || el.videoUrl;
+
+      if (hasMedia) {
+        elementCounter++;
+        elementsArray.push(
+          removeEmpty({
+            frontalImage: el.frontalImage?.url ?? null,
+            referenceImages: el.referenceImages?.map((img) => img.url),
+            videoUrl: el.videoUrl?.url ?? null,
+          })
+        );
+        // Prefix prompt with @ElementN so the model references the correct media segment
+        const prefix = `@Element${elementCounter}`;
+        const promptText = el.prompt?.trim() ?? '';
+        multiPromptArray.push({ prompt: promptText ? `${prefix} ${promptText}` : prefix });
+      } else {
+        // Prompt-only segment — no media reference needed
+        multiPromptArray.push({ prompt: el.prompt ?? '' });
+      }
+    }
+
+    if (!elementsArray.length) elementsArray = undefined;
+  }
+
   return removeEmpty({
     engine: 'kling-v3' as const,
+    // prompt is hidden (when: !multiShot) so it won't be in data when multiShot is active
     prompt: data.prompt,
     operation: 'operation' in data ? data.operation : undefined,
     mode: 'mode' in data ? data.mode : undefined,
@@ -82,23 +130,10 @@ function createV3Input(data: KlingCtx): KlingV3VideoGenInput {
     sourceImage: !isRef2Vid && hasImages ? data.images?.[0]?.url : undefined,
     endImage: !isRef2Vid && hasImages && data.images?.[1]?.url ? data.images[1].url : undefined,
     images: isRef2Vid && hasImages ? data.images?.map((img) => img.url) : undefined,
-    elements:
-      'elements' in data
-        ? (
-            data.elements as Array<{
-              frontalImage?: { url: string } | null;
-              referenceImages?: Array<{ url: string }>;
-              videoUrl?: { url: string } | null;
-            }>
-          )?.map((el) => ({
-            frontalImage: el.frontalImage?.url ?? null,
-            referenceImages: el.referenceImages?.map((img) => img.url),
-            videoUrl: el.videoUrl?.url ?? null,
-          }))
-        : undefined,
+    elements: elementsArray,
+    multiPrompt: multiPromptArray,
     generateAudio: 'generateAudio' in data ? data.generateAudio : undefined,
     keepAudio: 'keepAudio' in data ? data.keepAudio : undefined,
-    multiPrompt: 'multiPrompt' in data ? data.multiPrompt : undefined,
     quantity: data.quantity ?? 1,
     seed: data.seed,
   }) as KlingV3VideoGenInput;

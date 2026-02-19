@@ -58,6 +58,8 @@ export type ImageSlot = {
   label: string;
   /** Whether this slot is required */
   required?: boolean;
+  /** When true, the slot cannot be interacted with (upload or remove) */
+  disabled?: boolean;
 };
 
 type SourceImageUploadProps = {
@@ -601,9 +603,13 @@ export function SourceImageUploadMultiple({
     const uploadForSlot = uploads.find((u) => u.slotIndex === slotIndex);
     const isUploading = uploadForSlot?.status === 'uploading';
     const uploadError = uploadForSlot?.status === 'error' ? uploadForSlot.error : null;
+    const isSlotDisabled = disabled || slot.disabled;
 
     return (
-      <div key={slotIndex} className="flex flex-1 flex-col gap-1">
+      <div
+        key={slotIndex}
+        className={`flex flex-1 flex-col gap-1${slot.disabled ? ' opacity-50' : ''}`}
+      >
         {imageAtSlot ? (
           // Show image preview
           <Card withBorder padding={0} className="relative overflow-hidden">
@@ -622,7 +628,7 @@ export function SourceImageUploadMultiple({
             />
             <SourceImageUploadMultiple.CloseButton
               onClick={() => removeSlotItem(slotIndex)}
-              disabled={disabled}
+              disabled={isSlotDisabled}
             />
           </Card>
         ) : isUploading ? (
@@ -645,7 +651,7 @@ export function SourceImageUploadMultiple({
             }}
             accept={IMAGE_MIME_TYPE}
             maxFiles={1}
-            disabled={disabled}
+            disabled={isSlotDisabled}
             className="cursor-pointer"
             useFsAccessApi={!isAndroidDevice()}
           >

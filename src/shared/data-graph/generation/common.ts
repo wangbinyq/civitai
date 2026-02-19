@@ -35,6 +35,11 @@ function getEcosystemKeyForBaseModel(baseModelName: string): string | undefined 
   return ecosystem?.key;
 }
 
+/** Snap a value to the nearest step multiple and clamp to [min, max]. */
+function snapToStep(val: number, step: number, min: number, max: number): number {
+  return Math.min(Math.max(Math.round(val / step) * step, min), max);
+}
+
 // =============================================================================
 // Aspect Ratio Types & Node Builder
 // =============================================================================
@@ -133,8 +138,42 @@ export function negativePromptNode({ maxLength = 1000 }: { maxLength?: number } 
 }
 
 // =============================================================================
-// Slider Node Builders
+// Select Node Builders
 // =============================================================================
+
+/**
+ * Creates a string select node — the shared primitive for sampler/scheduler nodes.
+ * Input falls back to the resolved default when the value is not in options.
+ * Meta contains: options, presets (optional)
+ */
+function selectNode({
+  options,
+  defaultValue,
+  presets,
+}: {
+  options: readonly string[];
+  defaultValue?: string;
+  presets?: Array<{ label: string; value: string }>;
+}) {
+  const resolvedDefault =
+    defaultValue && options.includes(defaultValue) ? defaultValue : options[0];
+  return {
+    input: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        if (options.includes(val)) return val;
+        return resolvedDefault;
+      }),
+    output: z.enum(options),
+    defaultValue: resolvedDefault,
+    meta: {
+      options: options.map((s) => ({ label: s, value: s })),
+      presets,
+    },
+  };
+}
 
 /** Default sampler presets */
 const defaultSamplerPresets = [
@@ -155,24 +194,7 @@ export function samplerNode({
   defaultValue?: string;
   presets?: Array<{ label: string; value: string }>;
 } = {}) {
-  const resolvedDefault =
-    defaultValue && options.includes(defaultValue) ? defaultValue : options[0];
-  return {
-    input: z
-      .string()
-      .optional()
-      .transform((val) => {
-        if (!val) return undefined;
-        if (options.includes(val)) return val;
-        return resolvedDefault;
-      }),
-    output: z.enum(options),
-    defaultValue: resolvedDefault,
-    meta: {
-      options: options.map((s) => ({ label: s, value: s })),
-      presets,
-    },
-  };
+  return selectNode({ options, defaultValue, presets });
 }
 
 /**
@@ -186,120 +208,48 @@ export function schedulerNode({
   options: readonly string[];
   defaultValue?: string;
 }) {
-  const resolvedDefault =
-    defaultValue && options.includes(defaultValue) ? defaultValue : options[0];
-  return {
-    input: z
-      .string()
-      .optional()
-      .transform((val) => {
-        if (!val) return undefined;
-        if (options.includes(val)) return val;
-        return resolvedDefault;
-      }),
-    output: z.enum(options),
-    defaultValue: resolvedDefault,
-    meta: {
-      options: options.map((s) => ({ label: s, value: s })),
-    },
-  };
+  return selectNode({ options, defaultValue });
 }
 
-/** Default CFG scale presets */
-const defaultCfgScalePresets = [
-  { label: 'Creative', value: 4 },
-  { label: 'Balanced', value: 7 },
-  { label: 'Precise', value: 10 },
-];
+// =============================================================================
+// Slider Node Builder
+// =============================================================================
 
 /**
- * Creates a CFG Scale node.
- * Meta contains: min, max, step, presets (dynamic - varies by model family)
+ * Creates a generic numeric slider node.
+ * Meta contains: min, max, step, presets (for UI rendering)
+ *
+ * @param integer - When true, validates that the value is a whole number. If not specified, inferred from step (true if step is a whole number).
  */
-export function cfgScaleNode({
-  min = 1,
-  max = 10,
-  step = 0.5,
-  defaultValue = 7,
-  presets = defaultCfgScalePresets,
-}: {
-  min?: number;
-  max?: number;
-  step?: number;
-  defaultValue?: number;
-  presets?: Array<{ label: string; value: number }>;
-} = {}) {
-  return {
-    input: z.coerce.number().min(min).max(max).optional(),
-    output: z.number().min(min).max(max),
-    defaultValue,
-    meta: {
-      min,
-      max,
-      step,
-      presets,
-    },
-  };
-}
-
-/** Default steps presets */
-const defaultStepsPresets = [
-  { label: 'Fast', value: 15 },
-  { label: 'Balanced', value: 25 },
-  { label: 'High', value: 35 },
-];
-
-/**
- * Creates a steps node.
- * Meta contains: min, max, step, presets (dynamic - varies by model)
- */
-export function stepsNode({
-  min = 10,
-  max = 50,
+export function sliderNode({
+  min,
+  max,
   step = 1,
-  defaultValue = 25,
-  presets = defaultStepsPresets,
-}: {
-  min?: number;
-  max?: number;
-  step?: number;
-  defaultValue?: number;
-  presets?: Array<{ label: string; value: number }>;
-} = {}) {
-  return {
-    input: z.coerce.number().int().min(1).max(max).optional(),
-    output: z.number().int().min(1).max(max),
-    defaultValue,
-    meta: {
-      min,
-      max,
-      step,
-      presets,
-    },
-  };
-}
-
-/**
- * Creates a CLIP Skip node.
- * Meta contains: min, max, step, presets (dynamic)
- */
-export function clipSkipNode({
-  min = 1,
-  max = 3,
-  step = 1,
-  defaultValue = 2,
+  defaultValue,
   presets,
 }: {
-  min?: number;
-  max?: number;
+  min: number;
+  max: number;
   step?: number;
   defaultValue?: number;
   presets?: Array<{ label: string; value: number }>;
-} = {}) {
+}) {
+  const resolvedDefault = defaultValue ?? min;
+  // Infer integer from step if not explicitly provided
+  const isInteger = Number.isInteger(step);
+  let inputSchema = z.coerce.number();
+  let outputSchema = z.number();
+  if (isInteger) {
+    inputSchema = inputSchema.int() as typeof inputSchema;
+    outputSchema = outputSchema.int();
+  }
   return {
-    input: z.coerce.number().int().min(min).max(12).optional(),
-    output: z.number().int().min(min).max(12),
-    defaultValue,
+    input: inputSchema.optional().transform((val) => {
+      if (val === undefined) return undefined;
+      return snapToStep(val, step, min, max);
+    }),
+    output: outputSchema.min(min).max(max),
+    defaultValue: resolvedDefault,
     meta: {
       min,
       max,
@@ -418,8 +368,7 @@ export function quantityNode(config?: QuantityNodeConfig) {
         .optional()
         .transform((val) => {
           if (val === undefined) return undefined;
-          // Snap to step multiples (round up to nearest step) and clamp to max
-          return Math.min(Math.ceil(val / step) * step, max);
+          return snapToStep(val, step, min, max);
         }),
       output: z.number().min(min).max(max),
       defaultValue: min,
@@ -997,6 +946,8 @@ export function vaeNode({ ecosystem }: { ecosystem: string }) {
 export type ImageSlotConfig = {
   label: string;
   required?: boolean;
+  /** When true, the slot cannot be interacted with (upload or remove) */
+  disabled?: boolean;
 };
 
 export interface ImagesNodeConfig {
@@ -1075,37 +1026,6 @@ export function imagesNode({ min = 1, max = 1, slots, modes }: ImagesNodeConfig 
       max: effectiveMax,
       slots,
       modes,
-    },
-  };
-}
-
-// =============================================================================
-// Denoise Node Builder
-// =============================================================================
-
-/**
- * Creates a denoise strength node.
- * Meta contains: min, max, step (dynamic - could vary by workflow)
- */
-export function denoiseNode({
-  min = 0,
-  max = 1,
-  step = 0.05,
-  defaultValue = 0.75,
-}: {
-  min?: number;
-  max?: number;
-  step?: number;
-  defaultValue?: number;
-} = {}) {
-  return {
-    input: z.coerce.number().min(min).max(max).optional(),
-    output: z.number().min(min).max(max),
-    defaultValue,
-    meta: {
-      min,
-      max,
-      step,
     },
   };
 }

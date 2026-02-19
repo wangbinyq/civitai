@@ -27,8 +27,7 @@ import {
   seedNode,
   negativePromptNode,
   aspectRatioNode,
-  cfgScaleNode,
-  stepsNode,
+  sliderNode,
   enumNode,
   imagesNode,
   resourcesNode,
@@ -315,7 +314,7 @@ const wan225bGraph = new DataGraph<WanVersionCtx, GenerationCtx>()
     defaultValue: '580p' as const,
     meta: { options: wan225bResolutions },
   })
-  .node('steps', stepsNode({ min: 20, max: 60, defaultValue: 40 }))
+  .node('steps', sliderNode({ min: 20, max: 60, defaultValue: 40 }))
   .node('shift', {
     input: z.coerce.number().min(1).max(20).optional(),
     output: z.number().min(1).max(20),
@@ -456,7 +455,7 @@ export const wanGraph = new DataGraph<WanCtx, GenerationCtx>()
   // CFG scale (common to all versions)
   .node(
     'cfgScale',
-    cfgScaleNode({
+    sliderNode({
       min: 1,
       max: 10,
       step: 0.5,

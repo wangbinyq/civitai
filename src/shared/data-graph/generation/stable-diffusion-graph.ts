@@ -9,16 +9,13 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
-  clipSkipNode,
   createCheckpointGraph,
-  denoiseNode,
   imagesNode,
   negativePromptNode,
   resourcesNode,
   samplerNode,
   seedNode,
-  stepsNode,
+  sliderNode,
   vaeNode,
 } from './common';
 
@@ -94,9 +91,34 @@ export const stableDiffusionGraph = new DataGraph<
   )
   .node('negativePrompt', negativePromptNode())
   .node('sampler', samplerNode())
-  .node('cfgScale', cfgScaleNode())
-  .node('steps', stepsNode())
-  .node('clipSkip', clipSkipNode())
+  .node(
+    'cfgScale',
+    sliderNode({
+      min: 1,
+      max: 10,
+      step: 0.5,
+      defaultValue: 7,
+      presets: [
+        { label: 'Creative', value: 4 },
+        { label: 'Balanced', value: 7 },
+        { label: 'Precise', value: 10 },
+      ],
+    })
+  )
+  .node(
+    'steps',
+    sliderNode({
+      min: 10,
+      max: 50,
+      defaultValue: 25,
+      presets: [
+        { label: 'Fast', value: 15 },
+        { label: 'Balanced', value: 25 },
+        { label: 'High', value: 35 },
+      ],
+    })
+  )
+  .node('clipSkip', sliderNode({ min: 1, max: 3, defaultValue: 2 }))
   .node('seed', seedNode())
   // Denoise is shown for face-fix/hires-fix (always) or img2img/txt2img when images are present
   // Max is 0.75 when no images (text-only), 1.0 when images are present
@@ -108,7 +130,7 @@ export const stableDiffusionGraph = new DataGraph<
       const showForImages = (ctx.workflow === 'txt2img' || ctx.workflow === 'img2img') && hasImages;
       const max = hasImages ? 1 : 0.75;
       return {
-        ...denoiseNode({ max }),
+        ...sliderNode({ min: 0, max, step: 0.05, defaultValue: 0.75 }),
         when: alwaysShow || showForImages,
       };
     },

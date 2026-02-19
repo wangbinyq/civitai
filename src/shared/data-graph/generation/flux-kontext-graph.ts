@@ -17,10 +17,10 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   imagesNode,
   seedNode,
+  sliderNode,
 } from './common';
 
 // =============================================================================
@@ -99,11 +99,7 @@ export const fluxKontextGraph = new DataGraph<
   .node('aspectRatio', aspectRatioNode({ options: fluxKontextAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 2,
-      max: 20,
-      defaultValue: 3.5,
-    })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5 })
   )
   .node('seed', seedNode());
 

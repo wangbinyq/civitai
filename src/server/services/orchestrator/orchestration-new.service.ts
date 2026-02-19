@@ -354,15 +354,22 @@ function normalizeImageWorkflow(input: Record<string, unknown>): Record<string, 
  * Normalizes video workflows without images back to txt2vid.
  * Handles the case where a user submits img2vid or img2vid:ref2vid
  * without images (e.g., after removing images from the form).
+ *
+ * For img2vid:ref2vid, elements count as "has content" — if elements are
+ * provided, the workflow is kept even when images is empty.
  */
 function normalizeVideoWorkflow(input: Record<string, unknown>): Record<string, unknown> {
   let workflow = input.workflow as string | undefined;
   const images = input.images as unknown[] | undefined;
   const hasImages = Array.isArray(images) && images.length > 0;
 
-  // img2vid workflows without images → txt2vid
-  if ((workflow === 'img2vid' || workflow === 'img2vid:ref2vid') && !hasImages) {
+  if (workflow === 'img2vid' && !hasImages) {
     workflow = 'txt2vid';
+  } else if (workflow === 'img2vid:ref2vid' && !hasImages) {
+    // Keep ref2vid if elements are provided (elements substitute for images)
+    const elements = input.elements as unknown[] | undefined;
+    const hasElements = Array.isArray(elements) && elements.length > 0;
+    if (!hasElements) workflow = 'txt2vid';
   }
 
   return { ...input, workflow };

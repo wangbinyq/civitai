@@ -15,10 +15,10 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   imagesNode,
   seedNode,
+  sliderNode,
 } from './common';
 
 // =============================================================================
@@ -105,11 +105,7 @@ export const seedreamGraph = new DataGraph<{ ecosystem: string; workflow: string
   )
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 1,
-      max: 20,
-      defaultValue: 5,
-    })
+    sliderNode({ min: 1, max: 20, defaultValue: 5 })
   )
   .node('seed', seedNode());
 

@@ -27,6 +27,7 @@ import {
   Paper,
   Radio,
   Stack,
+  Switch,
   Tabs,
   Text,
 } from '@mantine/core';
@@ -79,7 +80,6 @@ import { OutputFormatInput } from './inputs/OutputFormatInput';
 import { ScaleFactorInput } from './inputs/ScaleFactorInput';
 import { SegmentedControlWrapper } from '~/libs/form/components/SegmentedControlWrapper';
 import { KlingElementsInput } from './inputs/KlingElementsInput';
-import { MultiPromptInput } from './inputs/MultiPromptInput';
 import { InfoPopover } from '~/components/InfoPopover/InfoPopover';
 
 // =============================================================================
@@ -234,7 +234,7 @@ export function GenerationForm() {
 
   return (
     <div className="flex size-full flex-1 flex-col">
-      <div className="flex-1 overflow-auto px-3 py-2">
+      <div className="flex-1 overflow-auto p-2">
         <Stack gap="sm" className="w-full">
           {/* Workflow and ecosystem selectors - inline */}
           <Group gap="xs" wrap="nowrap" className="w-full justify-between">
@@ -410,6 +410,30 @@ export function GenerationForm() {
             )}
           />
 
+          {/* Generation mode (standard/professional) */}
+          <Controller
+            graph={graph}
+            name="mode"
+            render={({ value, meta, onChange }) => (
+              <Radio.Group
+                value={value}
+                onChange={(v) => onChange(v as typeof value)}
+                label={
+                  <ControllerLabel
+                    label="Mode"
+                    info="Standard mode is faster to generate and more cost-effective. Pro takes longer to generate and has higher quality output."
+                  />
+                }
+              >
+                <Group mt="xs">
+                  {meta.options.map((o: { label: string; value: string }) => (
+                    <Radio key={o.value} value={o.value} label={o.label} />
+                  ))}
+                </Group>
+              </Radio.Group>
+            )}
+          />
+
           {/* Resource Alerts - Unstable, Content Restricted */}
           <MultiController
             graph={graph}
@@ -446,10 +470,28 @@ export function GenerationForm() {
             )}
           />
 
-          {/* Kling V3: Reference elements (ref2vid) */}
+          {/* Kling V3: Multi-shot toggle */}
           <Controller
             graph={graph}
-            name="elements"
+            name="multiShot"
+            render={({ value, onChange }) => (
+              <Input.Wrapper
+                label="Multi-Shot"
+                description="Enable multi-segment video generation with per-element media and prompts"
+              >
+                <Switch
+                  checked={value}
+                  onChange={(e) => onChange(e.currentTarget.checked)}
+                  mt={4}
+                />
+              </Input.Wrapper>
+            )}
+          />
+
+          {/* Kling V3: Multi-shot elements */}
+          <Controller
+            graph={graph}
+            name="klingElements"
             render={({ value, onChange }) => (
               <KlingElementsInput value={value ?? []} onChange={onChange} />
             )}
@@ -591,13 +633,6 @@ export function GenerationForm() {
             )}
           />
 
-          {/* Kling V3: Multi-prompt segments */}
-          <Controller
-            graph={graph}
-            name="multiPrompt"
-            render={({ value, onChange }) => <MultiPromptInput value={value} onChange={onChange} />}
-          />
-
           {/* Negative prompt (SD only) */}
           <Controller
             graph={graph}
@@ -641,15 +676,35 @@ export function GenerationForm() {
             graph={graph}
             name="duration"
             render={({ value, meta, onChange }) => {
-              const options = (meta as { options: { label: string; value: number }[] })?.options;
+              const sliderMeta = meta as {
+                min?: number;
+                max?: number;
+                step?: number;
+                options?: { label: string; value: string | number }[];
+              };
               const disabled = (meta as { disabled?: boolean })?.disabled;
+              if (sliderMeta.min !== undefined && sliderMeta.max !== undefined) {
+                return (
+                  <SliderInput
+                    label="Duration (seconds)"
+                    value={value as number}
+                    onChange={onChange}
+                    min={sliderMeta.min}
+                    max={sliderMeta.max}
+                    step={sliderMeta.step ?? 1}
+                    disabled={disabled}
+                  />
+                );
+              }
               return (
                 <div className="flex flex-col gap-1">
                   <Input.Label>Duration</Input.Label>
                   <SegmentedControlWrapper
                     value={value}
                     onChange={(v) => onChange(v)}
-                    data={options?.map((o) => ({ label: o.label, value: o.value })) ?? []}
+                    data={
+                      sliderMeta.options?.map((o) => ({ label: o.label, value: o.value })) ?? []
+                    }
                     disabled={disabled}
                   />
                 </div>
@@ -687,30 +742,6 @@ export function GenerationForm() {
                 checked={value}
                 onChange={(e) => onChange(e.currentTarget.checked)}
               />
-            )}
-          />
-
-          {/* Generation mode (standard/professional) */}
-          <Controller
-            graph={graph}
-            name="mode"
-            render={({ value, meta, onChange }) => (
-              <Radio.Group
-                value={value}
-                onChange={(v) => onChange(v as typeof value)}
-                label={
-                  <ControllerLabel
-                    label="Mode"
-                    info="Standard mode is faster to generate and more cost-effective. Pro takes longer to generate and has higher quality output."
-                  />
-                }
-              >
-                <Group mt="xs">
-                  {meta.options.map((o: { label: string; value: string }) => (
-                    <Radio key={o.value} value={o.value} label={o.label} />
-                  ))}
-                </Group>
-              </Radio.Group>
             )}
           />
 

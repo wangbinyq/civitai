@@ -21,11 +21,10 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   resourcesNode,
   seedNode,
-  stepsNode,
+  sliderNode,
   type ResourceData,
 } from './common';
 
@@ -114,14 +113,9 @@ const standardModeBaseGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 2,
-      max: 20,
-      defaultValue: 3.5,
-      presets: fluxGuidancePresets,
-    })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: fluxGuidancePresets })
   )
-  .node('steps', stepsNode({ min: 20, max: 50 }))
+  .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());
 
 /**
@@ -131,14 +125,9 @@ const proModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 2,
-      max: 20,
-      defaultValue: 3.5,
-      presets: fluxGuidancePresets,
-    })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: fluxGuidancePresets })
   )
-  .node('steps', stepsNode({ min: 20, max: 50 }))
+  .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());
 
 /**

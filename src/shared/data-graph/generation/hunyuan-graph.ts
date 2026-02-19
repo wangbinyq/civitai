@@ -18,8 +18,7 @@ import type { GenerationCtx } from './context';
 import {
   seedNode,
   aspectRatioNode,
-  cfgScaleNode,
-  stepsNode,
+  sliderNode,
   enumNode,
   imagesNode,
   resourcesNode,
@@ -81,7 +80,7 @@ export const hunyuanGraph = new DataGraph<HunyuanCtx, GenerationCtx>()
   // CFG scale node
   .node(
     'cfgScale',
-    cfgScaleNode({
+    sliderNode({
       min: 1,
       max: 10,
       step: 0.5,
@@ -100,10 +99,9 @@ export const hunyuanGraph = new DataGraph<HunyuanCtx, GenerationCtx>()
   // Steps node
   .node(
     'steps',
-    stepsNode({
+    sliderNode({
       min: 10,
       max: 30,
-      step: 1,
       defaultValue: 20,
       presets: [
         { label: 'Fast', value: 10 },

@@ -16,12 +16,11 @@ import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
 import {
   aspectRatioNode,
-  cfgScaleNode,
   createCheckpointGraph,
   imagesNode,
   resourcesNode,
   seedNode,
-  stepsNode,
+  sliderNode,
 } from './common';
 
 // =============================================================================
@@ -115,11 +114,7 @@ export const qwenGraph = new DataGraph<{ ecosystem: string; workflow: string }, 
   .node('aspectRatio', aspectRatioNode({ options: qwenAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    cfgScaleNode({
-      min: 2,
-      max: 20,
-      defaultValue: 3.5,
-    })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5 })
   )
-  .node('steps', stepsNode({ min: 20, max: 50 }))
+  .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());
