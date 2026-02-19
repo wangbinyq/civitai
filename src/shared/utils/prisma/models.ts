@@ -2897,6 +2897,7 @@ export interface ChallengeEvent {
   startDate: Date;
   endDate: Date;
   active: boolean;
+  winnerCooldownDays: number | null;
   createdById: number | null;
   createdBy?: User | null;
   createdAt: Date;

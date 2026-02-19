@@ -45,7 +45,13 @@ const featureFlags = createFeatureFlags({
   stripe: ['mod'], 
   imageTraining: { availability: ['user'], fliptKey: 'image-training' },
   videoTraining: { availability: ['public'], fliptKey: 'video-training' },
-  aiToolkitTraining: { availability: ['mod'], fliptKey: 'ai-toolkit-training' },
+  aiToolkitSd15: { availability: ['mod'], fliptKey: 'ai-toolkit-sd15' },
+  aiToolkitSdxl: { availability: ['mod'], fliptKey: 'ai-toolkit-sdxl' },
+  aiToolkitFlux: { availability: ['mod'], fliptKey: 'ai-toolkit-flux' },
+  aiToolkitSd35: { availability: ['mod'], fliptKey: 'ai-toolkit-sd35' },
+  aiToolkitHunyuan: { availability: ['mod'], fliptKey: 'ai-toolkit-hunyuan' },
+  aiToolkitWan: { availability: ['mod'], fliptKey: 'ai-toolkit-wan' },
+  aiToolkitChroma: { availability: ['mod'], fliptKey: 'ai-toolkit-chroma' },
   qwenTraining: { availability: ['mod'], fliptKey: 'qwen-training' },
   flux2Training: { availability: ['public'], fliptKey: 'flux2-training' },
   zimageturboTraining: { availability: ['mod'], fliptKey: 'zimage-turbo-training' },
@@ -149,6 +155,7 @@ const featureFlags = createFeatureFlags({
   trainingModelsModeration: ['granted'],
   cashManagement: ['granted'],
   challengePlatform: ['blue', 'red', 'public'],
+  liveMetrics: { availability: ['mod'], fliptKey: 'live-metrics' },
 });
 
 export const featureFlagKeys = Object.keys(featureFlags) as FeatureFlagKey[];
