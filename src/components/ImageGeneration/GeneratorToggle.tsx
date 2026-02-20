@@ -41,7 +41,7 @@ export function GeneratorToggleBanner() {
         withCloseButton
         onClose={() => setDismissed(true)}
       >
-        <Group justify="space-between" wrap="nowrap" gap="xs">
+        <Group justify="space-between" gap="xs">
           <Text size="sm">
             Try the <strong>new generator</strong> with improved workflows and better performance!
           </Text>
@@ -53,6 +53,7 @@ export function GeneratorToggleBanner() {
               switchToNew();
             }}
             leftSection={<IconSparkles size={14} />}
+            className="shrink-0"
           >
             Try it
           </Button>

@@ -93,14 +93,8 @@ const fullModeGraph = new DataGraph<HiDreamVariantCtx, GenerationCtx>()
       defaultValue: 'UniPC',
     })
   )
-  .node(
-    'cfgScale',
-    sliderNode({ min: 1, max: 20, defaultValue: 5 })
-  )
-  .node(
-    'steps',
-    sliderNode({ min: 20, max: 100, defaultValue: 50 })
-  )
+  .node('cfgScale', sliderNode({ min: 1, max: 20, defaultValue: 5 }))
+  .node('steps', sliderNode({ min: 20, max: 100, defaultValue: 50 }))
   .node('seed', seedNode());
 
 // =============================================================================

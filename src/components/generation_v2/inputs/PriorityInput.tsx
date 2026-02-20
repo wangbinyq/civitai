@@ -23,6 +23,7 @@ export interface PriorityOption {
   offset: number;
   memberOnly?: boolean;
   disabled?: boolean;
+  lineThrough?: boolean;
 }
 
 export interface PriorityInputProps {
@@ -104,7 +105,7 @@ export function PriorityInput({
               <span
                 className={clsx(
                   'flex items-center',
-                  isMember && value === 'normal' && 'line-through opacity-50'
+                  selected?.lineThrough && 'line-through opacity-50'
                 )}
               >
                 <span className="text-xs">+</span>
@@ -151,7 +152,7 @@ export function PriorityInput({
                 label={option.label}
                 offset={option.offset}
                 modifier={modifier}
-                isFreeForMember={isMember && option.value === 'normal'}
+                isFreeForMember={option.lineThrough}
               />
             </Menu.Item>
           );

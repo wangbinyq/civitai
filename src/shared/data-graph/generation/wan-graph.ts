@@ -43,7 +43,7 @@ import {
 const wanVersionDefs = [
   {
     version: 'v2.1',
-    label: 'Wan 2.1',
+    label: '2.1',
     ecosystems: {
       t2v: 'WanVideo14B_T2V',
       i2v: 'WanVideo14B_I2V_720p',
@@ -55,7 +55,7 @@ const wanVersionDefs = [
   },
   {
     version: 'v2.2',
-    label: 'Wan 2.2',
+    label: '2.2',
     ecosystems: {
       t2v: 'WanVideo-22-T2V-A14B',
       i2v: 'WanVideo-22-I2V-A14B',
@@ -63,7 +63,7 @@ const wanVersionDefs = [
   },
   {
     version: 'v2.2-5b',
-    label: 'Wan 2.2 5B',
+    label: '2.2 5B',
     ecosystems: {
       t2v: 'WanVideo-22-TI2V-5B',
       i2v: 'WanVideo-22-TI2V-5B',
@@ -71,7 +71,7 @@ const wanVersionDefs = [
   },
   {
     version: 'v2.5',
-    label: 'Wan 2.5',
+    label: '2.5',
     ecosystems: {
       t2v: 'WanVideo-25-T2V',
       i2v: 'WanVideo-25-I2V',

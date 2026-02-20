@@ -252,7 +252,7 @@ export const ecosystemGraph = new DataGraph<
     (ctx) => {
       const images = 'images' in ctx ? (ctx.images as unknown[]) : undefined;
       const multiShot = 'multiShot' in ctx ? (ctx.multiShot as boolean) : false;
-      return { ...promptNode({ required: !images?.length }), when: !multiShot };
+      return { ...promptNode({ required: !images?.length }) };
     },
     ['images', 'multiShot']
   )

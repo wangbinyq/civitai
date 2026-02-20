@@ -24,13 +24,17 @@ import {
   Divider,
   Group,
   Input,
+  Menu,
   Paper,
   Radio,
   Stack,
   Switch,
   Tabs,
   Text,
+  Tooltip,
+  UnstyledButton,
 } from '@mantine/core';
+import clsx from 'clsx';
 import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 
 import { CopyButton } from '~/components/CopyButton/CopyButton';
@@ -79,6 +83,7 @@ import { PriorityInput } from './inputs/PriorityInput';
 import { OutputFormatInput } from './inputs/OutputFormatInput';
 import { ScaleFactorInput } from './inputs/ScaleFactorInput';
 import { SegmentedControlWrapper } from '~/libs/form/components/SegmentedControlWrapper';
+import { ButtonGroupInput } from '~/libs/form/components/ButtonGroupInput';
 import { KlingElementsInput } from './inputs/KlingElementsInput';
 import { InfoPopover } from '~/components/InfoPopover/InfoPopover';
 
@@ -234,7 +239,7 @@ export function GenerationForm() {
 
   return (
     <div className="flex size-full flex-1 flex-col">
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 overflow-auto p-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--mantine-color-default-border)] [&::-webkit-scrollbar]:w-1.5">
         <Stack gap="sm" className="w-full">
           {/* Workflow and ecosystem selectors - inline */}
           <Group gap="xs" wrap="nowrap" className="w-full justify-between">
@@ -284,7 +289,7 @@ export function GenerationForm() {
                 : [];
 
               return (
-                <>
+                <div className="flex flex-col gap-1">
                   <SelectedWorkflowDisplay
                     workflowId={value as string}
                     ecosystemId={compatibility.currentEcosystemId}
@@ -293,86 +298,89 @@ export function GenerationForm() {
                     }
                   />
                   {modes.length > 0 && (
-                    <SegmentedControlWrapper
+                    <ButtonGroupInput
                       value={value as string}
                       onChange={(v) =>
                         graph.set({ workflow: v } as Parameters<typeof graph.set>[0])
                       }
                       data={modes}
-                      fullWidth
                     />
                   )}
-                </>
+                </div>
               );
             }}
           />
 
           {/* Checkpoint/Model selector with version selector */}
-          <Controller
-            graph={graph}
-            name="model"
-            render={({ value, meta, onChange }) => {
-              const hasHierarchicalVersions = meta.versions?.options.some(
-                (o: VersionOption) => o.children
-              );
-              return (
-                <>
-                  <ResourceSelectInput
-                    value={value as any}
-                    onChange={onChange as any}
-                    label={
-                      <ControllerLabel
-                        label="Model"
-                        info="Models are the resources you're generating with. Using a different base model can drastically alter the style and composition of images, while adding additional resources can change the characters, concepts and objects."
-                      />
-                    }
-                    buttonLabel="Select Model"
-                    modalTitle="Select Model"
-                    options={meta.options}
-                    allowRemove={false}
-                    allowSwap={!meta.modelLocked}
-                    onRevertToDefault={
-                      meta.defaultModelId
-                        ? () => onChange({ id: meta.defaultModelId } as any)
-                        : undefined
-                    }
-                    versions={!hasHierarchicalVersions ? meta.versions?.options : undefined}
-                  />
-                  {/* Hierarchical version selectors (e.g., precision/variant for HiDream) */}
-                  {hasHierarchicalVersions && meta.versions && (
-                    <VersionGroupSelector
-                      versions={meta.versions}
-                      modelId={(value as any)?.id}
+          <div className="flex flex-col gap-1">
+            <Controller
+              graph={graph}
+              name="model"
+              render={({ value, meta, onChange }) => {
+                const hasHierarchicalVersions = meta.versions?.options.some(
+                  (o: VersionOption) => o.children
+                );
+                return (
+                  <>
+                    <ResourceSelectInput
+                      value={value as any}
                       onChange={onChange as any}
+                      label={
+                        <ControllerLabel
+                          label="Model"
+                          info="Models are the resources you're generating with. Using a different base model can drastically alter the style and composition of images, while adding additional resources can change the characters, concepts and objects."
+                        />
+                      }
+                      buttonLabel="Select Model"
+                      modalTitle="Select Model"
+                      options={meta.options}
+                      allowRemove={false}
+                      allowSwap={!meta.modelLocked}
+                      onRevertToDefault={
+                        meta.defaultModelId
+                          ? () => onChange({ id: meta.defaultModelId } as any)
+                          : undefined
+                      }
+                      versions={!hasHierarchicalVersions ? meta.versions?.options : undefined}
                     />
-                  )}
-                </>
-              );
-            }}
-          />
+                    {/* Hierarchical version selectors (e.g., precision/variant for HiDream) */}
+                    {hasHierarchicalVersions && meta.versions && (
+                      <VersionGroupSelector
+                        versions={meta.versions}
+                        modelId={(value as any)?.id}
+                        onChange={onChange as any}
+                      />
+                    )}
+                  </>
+                );
+              }}
+            />
 
-          {/* Wan version picker */}
-          <Controller
-            graph={graph}
-            name="wanVersion"
-            render={({ value }) => (
-              <SegmentedControlWrapper
-                value={value}
-                onChange={(v) => {
-                  const def = wanVersionDefs.find((d) => d.version === v);
-                  if (!def) return;
-                  const snap = graph.getSnapshot() as { workflow?: string };
-                  const isImg2vid = snap.workflow === 'img2vid';
-                  // Set ecosystem directly — wanVersion is computed from it
-                  // v2.1: always T2V, wan21Graph handles I2V (resolution-dependent)
-                  const eco =
-                    isImg2vid && def.version !== 'v2.1' ? def.ecosystems.i2v : def.ecosystems.t2v;
-                  (graph as { set: (v: Record<string, unknown>) => void }).set({ ecosystem: eco });
-                }}
-                data={wanVersionOptions}
-              />
-            )}
-          />
+            {/* Wan version picker */}
+            <Controller
+              graph={graph}
+              name="wanVersion"
+              render={({ value }) => (
+                <ButtonGroupInput
+                  value={value}
+                  onChange={(v) => {
+                    const def = wanVersionDefs.find((d) => d.version === v);
+                    if (!def) return;
+                    const snap = graph.getSnapshot() as { workflow?: string };
+                    const isImg2vid = snap.workflow === 'img2vid';
+                    // Set ecosystem directly — wanVersion is computed from it
+                    // v2.1: always T2V, wan21Graph handles I2V (resolution-dependent)
+                    const eco =
+                      isImg2vid && def.version !== 'v2.1' ? def.ecosystems.i2v : def.ecosystems.t2v;
+                    (graph as { set: (v: Record<string, unknown>) => void }).set({
+                      ecosystem: eco,
+                    });
+                  }}
+                  data={wanVersionOptions}
+                />
+              )}
+            />
+          </div>
 
           {/* API version selector (e.g., Veo 3.0 vs 3.1) */}
           <Controller
@@ -1158,9 +1166,50 @@ function findModelPath(group: VersionGroup, modelId: number): VersionOption[] | 
   return null;
 }
 
+/** Compact dropdown for a single level in a version hierarchy. */
+function VersionLevelDropdown({
+  group,
+  selectedValue,
+  onChange,
+}: {
+  group: VersionGroup;
+  selectedValue: number;
+  onChange: (id: number) => void;
+}) {
+  const selected = group.options.find((o) => o.value === selectedValue) ?? group.options[0];
+  return (
+    <Menu position="bottom-start" withinPortal>
+      <Tooltip label={group.label} position="top" withArrow disabled={!group.label}>
+        <Menu.Target>
+          <UnstyledButton
+            className={clsx(
+              'flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold',
+              'bg-gray-1 hover:bg-gray-2',
+              'dark:bg-dark-5 dark:hover:bg-dark-4'
+            )}
+          >
+            {selected?.label}
+          </UnstyledButton>
+        </Menu.Target>
+      </Tooltip>
+      <Menu.Dropdown>
+        {group.options.map((option) => (
+          <Menu.Item
+            key={option.value}
+            onClick={() => onChange(option.value)}
+            className={clsx(selectedValue === option.value && 'bg-blue-5/10 dark:bg-blue-8/20')}
+          >
+            {option.label}
+          </Menu.Item>
+        ))}
+      </Menu.Dropdown>
+    </Menu>
+  );
+}
+
 /**
  * Hierarchical version selector for multi-level model version selection.
- * Walks a VersionGroup tree and renders a SegmentedControl for each level.
+ * Walks a VersionGroup tree and renders a compact inline dropdown for each level.
  * Used for ecosystems like HiDream where model selection has multiple axes (precision → variant).
  */
 function VersionGroupSelector({
@@ -1191,21 +1240,28 @@ function VersionGroupSelector({
     pathIdx++;
   }
 
+  const leaf = levels[levels.length - 1];
+
   return (
-    <>
-      {levels.map((level, i) => (
-        <div key={level.group.label ?? i} className="flex flex-col gap-1">
-          {level.group.label && <Input.Label>{level.group.label}</Input.Label>}
-          <SegmentedControlWrapper
-            value={level.selectedValue.toString()}
-            onChange={(v) => onChange({ id: Number(v) })}
-            data={level.group.options.map((o) => ({
-              label: o.label,
-              value: o.value.toString(),
-            }))}
-          />
-        </div>
+    <div className="flex items-center gap-1">
+      {/* Parent levels: compact dropdown */}
+      {levels.slice(0, -1).map((level, i) => (
+        <VersionLevelDropdown
+          key={level.group.label ?? i}
+          group={level.group}
+          selectedValue={level.selectedValue}
+          onChange={(id) => onChange({ id })}
+        />
       ))}
-    </>
+      {/* Leaf level: inline button group, fills remaining width */}
+      {leaf && (
+        <ButtonGroupInput
+          className="flex-1"
+          value={leaf.selectedValue.toString()}
+          onChange={(v) => onChange({ id: Number(v) })}
+          data={leaf.group.options.map((o) => ({ label: o.label, value: o.value.toString() }))}
+        />
+      )}
+    </div>
   );
 }

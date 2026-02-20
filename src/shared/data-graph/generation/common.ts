@@ -763,7 +763,9 @@ export function createCheckpointGraph(
           meta: (_ctx, _ext, value: ResourceData | undefined): CheckpointModelMeta => ({
             options: {
               canGenerate: true,
-              resources: getResourceSelectOptions(ctx.ecosystem, ['Checkpoint']),
+              resources: getResourceSelectOptions(ctx.ecosystem, ['Checkpoint']).map(
+                ({ partialSupport, ...resources }) => ({ ...resources, partialSupport: [] })
+              ),
               excludeIds: value ? [value.id] : [],
             },
             modelLocked,

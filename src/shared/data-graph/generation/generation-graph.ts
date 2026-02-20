@@ -47,6 +47,7 @@ type PriorityOption = {
   offset: number;
   memberOnly?: boolean;
   disabled?: boolean;
+  lineThrough?: boolean;
 };
 
 /** Output format options */
@@ -147,11 +148,11 @@ export const generationGraph = new DataGraph<Record<never, never>, GenerationCtx
 
       const options: PriorityOption[] = isMember
         ? [
-            { label: 'High', value: 'low', offset: 10 },
-            { label: 'Highest', value: 'high', offset: 20, memberOnly: true },
+            { label: 'High', value: 'low', offset: 10, lineThrough: true },
+            { label: 'Highest', value: 'high', offset: 20 },
           ]
         : [
-            { label: 'Standard', value: 'low', offset: 0, disabled: isMember },
+            { label: 'Standard', value: 'low', offset: 0 },
             { label: 'High', value: 'normal', offset: 10 },
             { label: 'Highest', value: 'high', offset: 20, memberOnly: true },
           ];

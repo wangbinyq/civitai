@@ -214,20 +214,20 @@ export const workflowConfigs: WorkflowConfigs = {
   txt2vid: {
     label: 'Create Video',
     modeLabel: 'Text to Video',
-    description: 'Generate an AI video from text',
+    description: 'Generate video from text',
     category: 'video',
     ecosystemIds: TXT2VID_IDS,
   },
 
   img2vid: {
     label: 'Image to Video',
-    description: 'Generate a video from an image',
+    description: 'Generate video from an image',
     category: 'video',
     ecosystemIds: [...TXT2VID_IDS, ...I2V_ONLY_IDS],
     aliases: [
       {
         label: 'First/Last Frame',
-        description: 'Create video from start and end images',
+        description: 'Generate video from start and end images',
         ecosystemIds: [ECO.Vidu, ECO.Kling],
       },
     ],
@@ -547,7 +547,7 @@ export const workflowGroups: WorkflowGroup[] = [
 export function getWorkflowModes(
   workflowId: string,
   ecosystemKey: string
-): { label: string; value: string }[] {
+): { label: string; value: string; description?: string }[] {
   const group = workflowGroups.find((g) => g.workflows.includes(workflowId));
   if (!group) return [];
 
@@ -562,7 +562,11 @@ export function getWorkflowModes(
 
   const modes = availableWorkflows.map((wfId) => {
     const config = workflowConfigByKey.get(wfId);
-    return { label: config?.modeLabel ?? config?.label ?? wfId, value: wfId };
+    return {
+      label: config?.modeLabel ?? config?.label ?? wfId,
+      value: wfId,
+      description: config?.description,
+    };
   });
 
   return modes.length > 1 ? modes : [];

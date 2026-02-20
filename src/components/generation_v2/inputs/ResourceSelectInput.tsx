@@ -25,7 +25,7 @@ import type {
 } from '~/components/ImageGeneration/GenerationForm/resource-select.types';
 import { LegacyActionIcon } from '~/components/LegacyActionIcon/LegacyActionIcon';
 import { useResourceDataContext, useResourceData } from './ResourceDataProvider';
-import { OverflowSegmentedControl } from './OverflowSegmentedControl';
+import { ButtonGroupInput } from '~/libs/form/components/ButtonGroupInput';
 import {
   ResourceItemContent,
   getResourceStatus,
@@ -84,8 +84,6 @@ export interface ResourceSelectInputProps extends Omit<InputWrapperProps, 'child
    * control is shown to switch between versions.
    */
   versions?: VersionOption[];
-  /** Maximum visible options in version selector before overflow (default: 5) */
-  versionsMaxVisible?: number;
 }
 
 // =============================================================================
@@ -195,7 +193,6 @@ export function ResourceSelectInput({
   resourceType,
   onRevertToDefault,
   versions,
-  versionsMaxVisible = 5,
   ...inputWrapperProps
 }: ResourceSelectInputProps) {
   const { registerResourceId, unregisterResourceId, getResourceData } = useResourceDataContext();
@@ -295,16 +292,16 @@ export function ResourceSelectInput({
       />
       {/* Version selector for models with multiple versions */}
       {showVersionSelector && versions && (
-        <OverflowSegmentedControl
-          value={value?.id?.toString()}
-          onChange={handleVersionChange}
-          options={versions.map(({ label, value: versionValue }) => ({
-            label,
-            value: versionValue.toString(),
-          }))}
-          maxVisible={versionsMaxVisible}
-          className="mt-2"
-        />
+        <div className="mt-1">
+          <ButtonGroupInput
+            value={value?.id?.toString() ?? ''}
+            onChange={handleVersionChange}
+            data={versions.map(({ label, value: versionValue }) => ({
+              label,
+              value: versionValue.toString(),
+            }))}
+          />
+        </div>
       )}
     </Input.Wrapper>
   );
