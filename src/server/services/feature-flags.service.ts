@@ -154,6 +154,7 @@ const featureFlags = createFeatureFlags({
   kinguinIframe: ['dev'],
   trainingModelsModeration: ['granted'],
   cashManagement: ['granted'],
+  auctionsMod: ['granted'],
   challengePlatform: ['blue', 'red', 'public'],
   liveMetrics: { availability: ['mod'], fliptKey: 'live-metrics' },
 });
