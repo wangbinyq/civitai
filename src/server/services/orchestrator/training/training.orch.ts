@@ -164,7 +164,7 @@ const createTrainingStep_AiToolkit = (input: ImageTrainingStepSchema): TrainingS
   // Params are already in AI Toolkit format from the database
   const aiToolkitParams = params as AiToolkitTrainingParams;
 
-  let trainingInput: AiToolkitTrainingInput = {
+  let trainingInput: AiToolkitTrainingInput & { numRepeats?: number } = {
     engine: 'ai-toolkit',
     ecosystem: aiToolkitParams.ecosystem as any, // Type assertion for new ecosystems (qwen, chroma, zimageturbo, zimagebase) until @civitai/client is updated
 
@@ -189,6 +189,7 @@ const createTrainingStep_AiToolkit = (input: ImageTrainingStepSchema): TrainingS
     flipAugmentation: aiToolkitParams.flipAugmentation,
     shuffleTokens: aiToolkitParams.shuffleTokens,
     keepTokens: aiToolkitParams.keepTokens,
+    numRepeats: aiToolkitParams.numRepeats,
   };
 
   if (aiToolkitParams.ecosystem === 'sd1') {
