@@ -236,13 +236,9 @@ export const processUserContentRemovalQueue = async () => {
     { name: USERS_SEARCH_INDEX, filter: `id IN [${userIdList}]` },
   ];
 
-<<<<<<< HEAD
-  const metricsIndexConfigs = [{ name: METRICS_IMAGES_SEARCH_INDEX, filter: `userId = ${userId}` }];
-=======
   const metricsIndexConfigs = [
     { name: METRICS_IMAGES_SEARCH_INDEX, filter: `userId IN [${userIdList}]` },
   ];
->>>>>>> main
 
   const processIndex = async (indexName: string, filter: string, client: MeiliSearch | null) => {
     if (!client) return;
@@ -252,15 +248,8 @@ export const processUserContentRemovalQueue = async () => {
       if (!index) return;
 
       console.log(
-<<<<<<< HEAD
-        `removeUserContentFromSearchIndex :: Deleting from ${indexName} with filter: ${filter}`
-      );
-
-      // Use filter-based deletion - no limit on document count
-=======
         `processUserContentRemovalQueue :: Deleting from ${indexName} with filter: ${filter}`
       );
->>>>>>> main
       await index.deleteDocuments({ filter });
     } catch (error) {
       console.error(`processUserContentRemovalQueue :: Error on ${indexName}:`, error);
@@ -277,42 +266,11 @@ export const processUserContentRemovalQueue = async () => {
 
   await Promise.allSettled([
     ...mainIndexConfigs.map(({ name, filter }) => processIndex(name, filter, searchClient)),
-<<<<<<< HEAD
-    // Metrics search indexes (separate Meilisearch instance)
-=======
->>>>>>> main
     ...metricsIndexConfigs.map(({ name, filter }) =>
       processIndex(name, filter, metricsSearchClient)
     ),
   ]);
 
-<<<<<<< HEAD
-  const processed: string[] = [];
-  const skipped: string[] = [];
-  const failed: string[] = [];
-
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      if (result.value.status === 'processed') {
-        processed.push(result.value.indexName);
-      } else {
-        skipped.push(result.value.indexName);
-      }
-    } else {
-      // Promise rejected - should be rare since processIndex catches errors
-      failed.push('unknown');
-    }
-  }
-
-  console.log(
-    `removeUserContentFromSearchIndex :: Complete - Processed: ${processed.join(
-      ', '
-    )}, Skipped: ${skipped.join(', ')}`
-  );
-
-  // Log summary to Axiom
-=======
->>>>>>> main
   await logToAxiom({
     name: 'process-user-content-removal-summary',
     type: 'info',

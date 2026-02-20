@@ -16,7 +16,9 @@ import type { RouterOutput } from '~/types/router';
 import { trpc } from '~/utils/trpc';
 
 export const getServerSideProps = createServerSideProps({
-  resolver: async ({ ctx }) => {
+  resolver: async ({ ctx, features }) => {
+    if (!features?.comicCreator) return { notFound: true };
+
     const username = ctx.query.username as string;
     const user = await dbRead.user.findUnique({ where: { username }, select: { bannedAt: true } });
     if (user?.bannedAt)
