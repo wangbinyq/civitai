@@ -189,6 +189,7 @@ const createTrainingStep_AiToolkit = (input: ImageTrainingStepSchema): TrainingS
     flipAugmentation: aiToolkitParams.flipAugmentation,
     shuffleTokens: aiToolkitParams.shuffleTokens,
     keepTokens: aiToolkitParams.keepTokens,
+    numberOfRepeats: aiToolkitParams.numRepeats ?? undefined,
   };
 
   if (aiToolkitParams.ecosystem === 'sd1') {
