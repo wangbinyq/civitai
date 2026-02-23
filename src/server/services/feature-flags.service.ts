@@ -133,6 +133,7 @@ const featureFlags = createFeatureFlags({
   announcements: ['granted'],
   blocklists: ['granted'],
   toolSearch: ['public'],
+  comicSearch: ['public'],
   generationOnlyModels: ['mod', 'granted', 'gold'],
   appTour: ['public'],
   privateModels: ['public'],
@@ -156,6 +157,7 @@ const featureFlags = createFeatureFlags({
   cashManagement: ['granted'],
   auctionsMod: ['granted'],
   challengePlatform: ['blue', 'red', 'public'],
+  comicCreator: { availability: ['mod'], fliptKey: 'comic-creator' },
   liveMetrics: { availability: ['mod'], fliptKey: 'live-metrics' },
 });
 
