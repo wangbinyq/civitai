@@ -183,11 +183,19 @@ function applyWorkflowToForm({
   clearResources,
 }: ApplyWorkflowOptions & { ecosystem?: string; clearResources: boolean }) {
   dialogStore.closeById('generated-image');
-  generationGraphPanel.setView('generate');
+
+  const config = workflowConfigByKey.get(workflowId);
+  const isEnhancement = config?.enhancement === true;
+
+  // For enhancement workflows, save current view so we can return to it after submit
+  if (isEnhancement) {
+    generationGraphPanel.setViewWithReturn('generate');
+  } else {
+    generationGraphPanel.setView('generate');
+  }
 
   const inputType = getInputTypeForWorkflow(workflowId);
   const stepParams = step.params;
-  const config = workflowConfigByKey.get(workflowId);
 
   // Build images in graph format { url, width, height }[]
   // Pass image for workflows that require it (inputType: 'image') OR
@@ -198,9 +206,6 @@ function applyWorkflowToForm({
   const images = acceptsImages
     ? [{ url: image.url, width: image.width, height: image.height }]
     : undefined;
-
-  // For enhancement workflows, store the original metadata
-  const isEnhancement = config?.enhancement === true;
 
   if (isEnhancement && step.metadata) {
     // Store source metadata keyed by the image/video URL

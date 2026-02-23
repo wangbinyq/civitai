@@ -62,7 +62,7 @@ export const hunyuanGraph = new DataGraph<HunyuanCtx, GenerationCtx>()
   .node(
     'images',
     (ctx) => ({
-      ...imagesNode(),
+      ...imagesNode({ warnOnMissingAiMetadata: true }),
       when: !ctx.workflow.startsWith('txt'),
     }),
     ['workflow']

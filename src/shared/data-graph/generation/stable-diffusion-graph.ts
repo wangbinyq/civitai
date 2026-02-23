@@ -43,6 +43,7 @@ const sd1AspectRatios = [
 
 /** Workflows that always show the denoise node (regardless of images) */
 const DENOISE_ALWAYS = [
+  'img2img',
   'txt2img:face-fix',
   'img2img:face-fix',
   'txt2img:hires-fix',
@@ -127,11 +128,13 @@ export const stableDiffusionGraph = new DataGraph<
     (ctx) => {
       const hasImages = Array.isArray(ctx.images) && ctx.images.length > 0;
       const alwaysShow = DENOISE_ALWAYS.includes(ctx.workflow);
-      const showForImages = (ctx.workflow === 'txt2img' || ctx.workflow === 'img2img') && hasImages;
-      const max = hasImages ? 1 : 0.75;
+      const showForTxt2imgImages = ctx.workflow === 'txt2img' && hasImages;
+      // img2img always shows denoise (included in DENOISE_ALWAYS); use max 1 to prevent value resets
+      const isImg2Img = ctx.workflow === 'img2img';
+      const max = alwaysShow || isImg2Img || hasImages ? 1 : 0.75;
       return {
         ...sliderNode({ min: 0, max, step: 0.05, defaultValue: 0.75 }),
-        when: alwaysShow || showForImages,
+        when: alwaysShow || showForTxt2imgImages,
       };
     },
     ['workflow', 'images']

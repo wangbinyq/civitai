@@ -62,7 +62,7 @@ export const ltxv2Graph = new DataGraph<LTXV2Ctx, GenerationCtx>()
   .node(
     'images',
     (ctx) => ({
-      ...imagesNode(),
+      ...imagesNode({ warnOnMissingAiMetadata: true }),
       when: !ctx.workflow.startsWith('txt'),
     }),
     ['workflow']

@@ -60,6 +60,7 @@ import { ecosystemById } from '~/shared/constants/basemodel.constants';
 
 import { useWorkflowHistoryStore } from '~/store/workflow-history.store';
 import { workflowPreferences } from '~/store/workflow-preferences.store';
+import { generationGraphPanel } from '~/store/generation-graph.store';
 import { useCompatibilityInfo } from './hooks/useCompatibilityInfo';
 import { AccordionLayout } from './AccordionLayout';
 import { openCompatibilityConfirmModal } from './CompatibilityConfirmModal';
@@ -133,6 +134,7 @@ export function GenerationForm() {
   }, [snapshot.workflow, snapshot.ecosystem]);
 
   // Navigate back in workflow history (falls back to last-used non-enhancement workflow)
+  // Also restores the panel view the user was on before opening the enhancement form
   const handleNavigationBack = useCallback(() => {
     const prev = workflowHistory.back() ?? workflowPreferences.getLastUsedWorkflow();
     if (!prev) return;
@@ -141,6 +143,8 @@ export function GenerationForm() {
       workflow: prev.workflow,
       ecosystem: prev.ecosystem,
     } as Parameters<typeof graph.set>[0]);
+    // Restore the panel view the user was on before (e.g., queue/feed)
+    generationGraphPanel.restorePreviousView();
     // Reset on next render (after snapshot has updated and the push effect has run)
     requestAnimationFrame(() => {
       isNavigatingRef.current = false;
@@ -474,6 +478,7 @@ export function GenerationForm() {
                 slots={meta?.slots}
                 error={error?.message}
                 enableDrawing={snapshot.workflow === 'img2img:edit'}
+                warnOnMissingAiMetadata={meta?.warnOnMissingAiMetadata}
               />
             )}
           />

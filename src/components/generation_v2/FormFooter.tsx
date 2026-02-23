@@ -143,9 +143,7 @@ function PriorityAlertSpace({
 
   return (
     <>
-      {dailyBoost.canShow ? (
-        <DailyBoostRewardClaim />
-      ) : null}
+      {dailyBoost.canShow ? <DailyBoostRewardClaim /> : null}
       <QueueSnackbar />
       {priorityAlert}
     </>
@@ -507,7 +505,10 @@ export function FormFooter({ onSubmitSuccess }: { onSubmitSuccess?: () => void }
                 </Card>
               )}
             />
-            <SubmitButton isLoading={generateMutation.isLoading || isMinLoading} onSubmit={handleSubmit} />
+            <SubmitButton
+              isLoading={generateMutation.isLoading || isMinLoading}
+              onSubmit={handleSubmit}
+            />
             <Button onClick={handleReset} variant="default" className="h-auto px-3">
               Reset
             </Button>

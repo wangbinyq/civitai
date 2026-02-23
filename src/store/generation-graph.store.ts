@@ -73,10 +73,7 @@ interface GenerationGraphState {
  * shows the right UI. Remove when legacy generator is removed.
  * See docs/legacy-generator-files.md
  */
-function syncLegacyFormStore(
-  params: Record<string, unknown>,
-  resources?: ResourceData[]
-) {
+function syncLegacyFormStore(params: Record<string, unknown>, resources?: ResourceData[]) {
   const workflow = params.workflow as string | undefined;
   const ecosystem = params.ecosystem as string | undefined;
 
@@ -240,6 +237,18 @@ export const generationGraphPanel = {
   open: store.open,
   close: store.close,
   setView: (view: 'generate' | 'queue' | 'feed') => useGenerationPanelStore.setState({ view }),
+  /** Save the current panel view so it can be restored after an enhancement workflow */
+  setViewWithReturn: (view: 'generate' | 'queue' | 'feed') => {
+    const { view: currentView } = useGenerationPanelStore.getState();
+    useGenerationPanelStore.setState({ view, previousView: currentView });
+  },
+  /** Restore the previously saved panel view (clears previousView) */
+  restorePreviousView: () => {
+    const { previousView } = useGenerationPanelStore.getState();
+    if (previousView) {
+      useGenerationPanelStore.setState({ view: previousView, previousView: undefined });
+    }
+  },
 };
 
 export const generationGraphStore = {

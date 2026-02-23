@@ -113,7 +113,7 @@ export function aspectRatioNode({
  * No meta - all props (label, placeholder, etc.) are static.
  */
 export function promptNode({ required }: { required?: boolean } = {}) {
-  let output = z.string().trim().max(10000, 'Prompt is too long');
+  let output = z.string().trim().max(6000, 'Prompt is too long');
   if (required) output = output.nonempty('Prompt is required');
   return {
     input: z.string().optional(),
@@ -129,7 +129,7 @@ export function promptNode({ required }: { required?: boolean } = {}) {
  * Creates a negative prompt node.
  * No meta - all props are static.
  */
-export function negativePromptNode({ maxLength = 1000 }: { maxLength?: number } = {}) {
+export function negativePromptNode({ maxLength = 6000 }: { maxLength?: number } = {}) {
   return {
     input: z.string().optional(),
     output: z.string().trim().max(maxLength, 'Negative prompt is too long'),
@@ -235,20 +235,16 @@ export function sliderNode({
   presets?: Array<{ label: string; value: number }>;
 }) {
   const resolvedDefault = defaultValue ?? min;
-  // Infer integer from step if not explicitly provided
-  const isInteger = Number.isInteger(step);
-  let inputSchema = z.coerce.number();
-  let outputSchema = z.number();
-  if (isInteger) {
-    inputSchema = inputSchema.int() as typeof inputSchema;
-    outputSchema = outputSchema.int();
-  }
+
   return {
-    input: inputSchema.optional().transform((val) => {
-      if (val === undefined) return undefined;
-      return snapToStep(val, step, min, max);
-    }),
-    output: outputSchema.min(min).max(max),
+    input: z.coerce
+      .number()
+      .optional()
+      .transform((val) => {
+        if (val === undefined) return undefined;
+        return snapToStep(val, step, min, max);
+      }),
+    output: z.number().min(min).max(max),
     defaultValue: resolvedDefault,
     meta: {
       min,
@@ -967,6 +963,11 @@ export interface ImagesNodeConfig {
    * Each mode maps to a workflow key — selecting a mode switches the workflow.
    */
   modes?: { label: string; value: string; workflow: string }[];
+  /**
+   * When true, warns the user if the uploaded image is missing AI generation metadata.
+   * Used for video generation flows where source image metadata improves output quality.
+   */
+  warnOnMissingAiMetadata?: boolean;
 }
 
 /**
@@ -988,7 +989,13 @@ export interface ImagesNodeConfig {
  *   ]
  * }), [])
  */
-export function imagesNode({ min = 1, max = 1, slots, modes }: ImagesNodeConfig = {}) {
+export function imagesNode({
+  min = 1,
+  max = 1,
+  slots,
+  modes,
+  warnOnMissingAiMetadata,
+}: ImagesNodeConfig = {}) {
   // When slots are provided, max is derived from slots length
   const effectiveMax = slots?.length ?? max;
   const effectiveMin = slots ? slots.filter((s) => s.required).length : min;
@@ -1028,6 +1035,7 @@ export function imagesNode({ min = 1, max = 1, slots, modes }: ImagesNodeConfig 
       max: effectiveMax,
       slots,
       modes,
+      warnOnMissingAiMetadata,
     },
   };
 }

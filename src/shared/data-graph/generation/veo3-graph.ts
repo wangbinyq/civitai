@@ -116,10 +116,10 @@ export const veo3Graph = new DataGraph<Veo3Ctx, GenerationCtx>()
     'images',
     (ctx) => {
       if (ctx.workflow === 'img2vid:ref2vid') {
-        return { ...imagesNode({ max: 7 }), when: true };
+        return { ...imagesNode({ max: 7, warnOnMissingAiMetadata: true }), when: true };
       }
       if (ctx.workflow === 'img2vid') {
-        return { ...imagesNode(), when: true };
+        return { ...imagesNode({ warnOnMissingAiMetadata: true }), when: true };
       }
       return { ...imagesNode(), when: false };
     },

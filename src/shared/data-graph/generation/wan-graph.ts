@@ -404,7 +404,7 @@ export const wanGraph = new DataGraph<WanCtx, GenerationCtx>()
   .node(
     'images',
     (ctx) => ({
-      ...imagesNode(),
+      ...imagesNode({ warnOnMissingAiMetadata: true }),
       when: !ctx.workflow.startsWith('txt'),
     }),
     ['workflow']

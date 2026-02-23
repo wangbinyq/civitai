@@ -74,13 +74,14 @@ export const viduGraph = new DataGraph<ViduCtx, GenerationCtx>()
         return {
           ...imagesNode({
             slots: [{ label: 'First Frame', required: true }, { label: 'Last Frame (optional)' }],
+            warnOnMissingAiMetadata: true,
           }),
           when: true,
         };
       }
       if (ctx.workflow === 'img2vid:ref2vid') {
         return {
-          ...imagesNode({ max: 7 }),
+          ...imagesNode({ max: 7, warnOnMissingAiMetadata: true }),
           when: true,
         };
       }

@@ -221,6 +221,7 @@ export const ecosystems: EcosystemRecord[] = [
     displayName: 'Flux.2 Klein 9B',
     familyId: 1,
     sortOrder: 4,
+    parentEcosystemId: ECO.Flux2,
   },
   {
     id: ECO.Flux2Klein_9B_base,
@@ -229,6 +230,7 @@ export const ecosystems: EcosystemRecord[] = [
     displayName: 'Flux.2 Klein 9B Base',
     familyId: 1,
     sortOrder: 5,
+    parentEcosystemId: ECO.Flux2,
   },
   {
     id: ECO.Flux2Klein_4B,
@@ -237,6 +239,7 @@ export const ecosystems: EcosystemRecord[] = [
     displayName: 'Flux.2 Klein 4B',
     familyId: 1,
     sortOrder: 6,
+    parentEcosystemId: ECO.Flux2,
   },
   {
     id: ECO.Flux2Klein_4B_base,
@@ -245,6 +248,7 @@ export const ecosystems: EcosystemRecord[] = [
     displayName: 'Flux.2 Klein 4B Base',
     familyId: 1,
     sortOrder: 7,
+    parentEcosystemId: ECO.Flux2,
   },
 
   // Stable Diffusion Family (familyId: 2)
@@ -2396,6 +2400,11 @@ export const baseModels: BaseModelRecord[] = [
 export const baseModelById = new Map(baseModels.map((m) => [m.id, m]));
 export const baseModelByName = new Map(baseModels.map((m) => [m.name, m]));
 
+export function getEcosystem(baseModel: string) {
+  const model = baseModelByName.get(baseModel);
+  if (model) return ecosystemById.get(model.ecosystemId);
+}
+
 /**
  * Gets the ecosystem name (lowercase) for a base model display name.
  * Used for constructing AIR strings.
@@ -2403,10 +2412,8 @@ export const baseModelByName = new Map(baseModels.map((m) => [m.name, m]));
  * @returns The ecosystem name (e.g., 'sd1', 'sdxl') or lowercase input as fallback
  */
 export function getEcosystemName(baseModel: string): string {
-  const model = baseModelByName.get(baseModel);
-  if (!model) return baseModel.toLowerCase();
-
-  const ecosystem = ecosystemById.get(model.ecosystemId);
+  const ecosystem = getEcosystem(baseModel);
+  if (!ecosystem) return baseModel.toLowerCase();
   return ecosystem?.name ?? baseModel.toLowerCase();
 }
 
@@ -2430,9 +2437,12 @@ export function isEcosystemExperimental(ecosystemKey: string): boolean {
 /**
  * Get the root ecosystem for an ecosystem (follows parent chain)
  */
-export function getRootEcosystem(ecosystemId: number): EcosystemRecord {
-  const ecosystem = ecosystemById.get(ecosystemId);
-  if (!ecosystem) throw new Error(`Ecosystem ${ecosystemId} not found`);
+export function getRootEcosystem(ecosystemIdOrBaseModel: number | string): EcosystemRecord {
+  const ecosystem =
+    typeof ecosystemIdOrBaseModel === 'string'
+      ? getEcosystem(ecosystemIdOrBaseModel)
+      : ecosystemById.get(ecosystemIdOrBaseModel);
+  if (!ecosystem) throw new Error(`Ecosystem ${ecosystemIdOrBaseModel} not found`);
 
   if (ecosystem.parentEcosystemId) {
     return getRootEcosystem(ecosystem.parentEcosystemId);

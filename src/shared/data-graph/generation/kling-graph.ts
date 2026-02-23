@@ -156,7 +156,7 @@ const klingLegacyGraph = new DataGraph<KlingVersionCtx, GenerationCtx>()
   .node(
     'images',
     (ctx) => ({
-      ...imagesNode(),
+      ...imagesNode({ warnOnMissingAiMetadata: true }),
       when: !ctx.workflow.startsWith('txt'),
     }),
     ['workflow']
@@ -300,13 +300,14 @@ const klingV3Graph = new DataGraph<KlingVersionCtx, GenerationCtx>()
               { label: 'Start Image', required: true },
               { label: 'End Image', disabled: ctx.multiShot === true },
             ],
+            warnOnMissingAiMetadata: true,
           }),
           when: true,
         };
       }
       if (ctx.workflow === 'img2vid:ref2vid') {
         return {
-          ...imagesNode({ max: 7 }),
+          ...imagesNode({ max: 7, warnOnMissingAiMetadata: true }),
           when: ctx.multiShot !== true,
         };
       }
