@@ -13,26 +13,21 @@
 import z from 'zod';
 import { DataGraph } from '~/libs/data-graph/data-graph';
 import type { GenerationCtx } from './context';
-import {
-  aspectRatioNode,
-  createCheckpointGraph,
-  imagesNode,
-  seedNode,
-  sliderNode,
-} from './common';
+import { aspectRatioNode, createCheckpointGraph, imagesNode, seedNode, sliderNode } from './common';
 
 // =============================================================================
 // Seedream Version Constants
 // =============================================================================
 
 /** Seedream version type */
-export type SeedreamVersion = 'v3' | 'v4' | 'v4.5';
+export type SeedreamVersion = 'v3' | 'v4' | 'v4.5' | 'v5.0-lite';
 
 /** Seedream version IDs */
 const seedreamVersionIds = {
   v3: 2208174,
   v4: 2208278,
   'v4.5': 2470991,
+  'v5.0-lite': 2720141,
 } as const;
 
 /** Options for seedream version selector (using version IDs as values) */
@@ -40,6 +35,7 @@ const seedreamVersionOptions = [
   { label: 'v3', value: seedreamVersionIds.v3 },
   { label: 'v4', value: seedreamVersionIds.v4 },
   { label: 'v4.5', value: seedreamVersionIds['v4.5'] },
+  { label: 'v5.0 lite', value: seedreamVersionIds['v5.0-lite'] },
 ];
 
 // =============================================================================
@@ -103,10 +99,7 @@ export const seedreamGraph = new DataGraph<{ ecosystem: string; workflow: string
     },
     ['model']
   )
-  .node(
-    'cfgScale',
-    sliderNode({ min: 1, max: 20, defaultValue: 5 })
-  )
+  .node('cfgScale', sliderNode({ min: 1, max: 20, defaultValue: 5 }))
   .node('seed', seedNode());
 
 // Export version options for use in components
