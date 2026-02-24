@@ -31,6 +31,7 @@ import {
   workflowConfigByKey,
 } from '~/shared/data-graph/generation/config/workflows';
 import type { GenerationCtx } from '~/shared/data-graph/generation/context';
+import type { ResourceData } from '~/shared/data-graph/generation/common';
 import { getResourceData } from '~/server/services/generation/generation.service';
 import type { GenerationResource } from '~/shared/types/generation.types';
 import { REDIS_SYS_KEYS, sysRedis } from '~/server/redis/client';
@@ -931,7 +932,7 @@ function getResourceRefsFromStep(
 
   // Try params.resources first (video workflows store resources here)
   const paramsResources = params.resources as
-    | Array<{ air?: string; id?: number; strength?: number; epochNumber?: number }>
+    | Array<{ air?: string; id?: number; strength?: number } & Partial<ResourceData>>
     | undefined;
   if (paramsResources && paramsResources.length > 0) {
     return paramsResources.map((r) => {
@@ -940,16 +941,21 @@ function getResourceRefsFromStep(
         const { version } = parseAIR(r.air);
         return { id: version, strength: r.strength };
       }
-      // Handle ID format (standard format)
-      return { id: r.id!, strength: r.strength, epochNumber: r.epochNumber };
+      return {
+        id: r.id!,
+        strength: r.strength,
+        epochNumber: r.epochDetails?.epochNumber,
+      };
     });
   }
 
-  // Fall back to metadata.resources (standard format)
-  const metadataResources = metadata.resources as
-    | Array<{ id: number; strength?: number | null; epochNumber?: number }>
-    | undefined;
-  return metadataResources ?? [];
+  // Fall back to metadata.resources (ResourceData format from data-graph)
+  const metadataResources = metadata.resources as ResourceData[] | undefined;
+  return (metadataResources ?? []).map((r) => ({
+    id: r.id,
+    strength: r.strength,
+    epochNumber: r.epochDetails?.epochNumber,
+  }));
 }
 
 /**
@@ -1225,8 +1231,10 @@ export async function formatGenerationResponse2(
     }
   }
 
-  // Deduplicate and fetch all resources
-  const uniqueRefs = Array.from(new Map(allResourceRefs.map((r) => [r.id, r])).values());
+  // Deduplicate by (id, epoch) — not just id — so different epochs of the same version survive
+  const uniqueRefs = Array.from(
+    new Map(allResourceRefs.map((r) => [`${r.id}_${r.epoch ?? ''}`, r])).values()
+  );
   const enrichedResources = uniqueRefs.length > 0 ? await getResourceData(uniqueRefs, user) : [];
 
   // Format each workflow

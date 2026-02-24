@@ -187,7 +187,7 @@ export const useGenerationGraphStore = create<GenerationGraphState>()(
           try {
             const result = await fetchGenerationData(input);
             const isMedia = ['audio', 'image', 'video'].includes(input.type);
-            const resources = result.resources.map(substituteResource).map(toResourceData);
+            const resources = result.resources.map(substituteResource);
 
             // TEMPORARY: Sync legacy form store (remove with legacy generator)
             syncLegacyFormStore(result.params, resources);
