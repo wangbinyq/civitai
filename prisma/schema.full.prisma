@@ -605,6 +605,8 @@ enum TrainingStatus {
   Failed
   /// published
   Approved
+  /// moderation review expired before completion
+  Expired
 }
 
 enum CommercialUse {
@@ -3869,6 +3871,7 @@ model ChallengeJudge {
   collectionPrompt      String? @db.Text
   contentPrompt         String? @db.Text
   reviewPrompt          String? @db.Text
+  reviewTemplate        String? @db.Text // JSON message template (agent-workbench format)
   winnerSelectionPrompt String? @db.Text
   active                Boolean @default(true)
 
