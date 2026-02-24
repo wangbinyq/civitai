@@ -132,7 +132,7 @@ export const constants = {
     [ReviewReactions.Cry]: '😢',
   },
   richTextEditor: {
-    maxFileSize: 1024 * 1024 * 5, // 5MB
+    maxFileSize: 1024 * 1024 * 50, // 50MB
     accept: [...IMAGE_MIME_TYPE, ...VIDEO_MIME_TYPE],
     // Taken from https://v5.mantine.dev/others/tiptap/#text-color
     presetColors: [
