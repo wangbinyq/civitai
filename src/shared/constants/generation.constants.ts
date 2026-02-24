@@ -500,8 +500,8 @@ export const EXPERIMENTAL_MODE_SUPPORTED_MODELS: string[] = [
   'Pony',
   'Illustrious',
   'NoobAI',
-  // 'Flux1',
-  // 'FluxKrea',
+  'Flux1',
+  'FluxKrea',
 ];
 export const fluxModeOptions = [
   { label: 'Draft', value: fluxDraftAir },
