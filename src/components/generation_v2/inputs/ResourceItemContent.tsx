@@ -312,7 +312,7 @@ export function ResourceItemContent({
         )}
       </Group>
       {hasStrength && (
-        <div className="mt-2 flex w-full items-center gap-2">
+        <div className="flex w-full items-center gap-2">
           <NumberSlider
             className="flex-1"
             value={strengthValue ?? resource.strength ?? 1}
@@ -320,7 +320,6 @@ export function ResourceItemContent({
             min={!isSameMinMaxStrength ? resource.minStrength : -1}
             max={!isSameMinMaxStrength ? resource.maxStrength : 2}
             step={0.05}
-            reverse
             disabled={disabled}
           />
         </div>
