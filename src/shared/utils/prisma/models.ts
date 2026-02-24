@@ -2899,6 +2899,7 @@ export interface ChallengeJudge {
   collectionPrompt: string | null;
   contentPrompt: string | null;
   reviewPrompt: string | null;
+  reviewTemplate: string | null;
   winnerSelectionPrompt: string | null;
   active: boolean;
   createdAt: Date;
