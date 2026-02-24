@@ -442,6 +442,7 @@ export const upsertJudgeSchema = z.object({
   collectionPrompt: z.string().optional().nullable(),
   contentPrompt: z.string().optional().nullable(),
   reviewPrompt: z.string().optional().nullable(),
+  reviewTemplate: z.string().optional().nullable(),
   winnerSelectionPrompt: z.string().optional().nullable(),
   active: z.boolean().optional(),
 });
@@ -457,7 +458,6 @@ export const playgroundGenerateContentSchema = z.object({
       content: z.string().optional(),
     })
     .optional(),
-  userMessage: z.string().optional(),
   aiModel: z.string().min(1).optional(),
 });
 
@@ -474,7 +474,7 @@ export const playgroundReviewImageSchema = z.object({
       review: z.string().optional(),
     })
     .optional(),
-  userMessage: z.string().optional(),
+  reviewTemplate: z.string().optional(),
   aiModel: z.string().min(1).optional(),
 });
 
@@ -489,6 +489,5 @@ export const playgroundPickWinnersSchema = z.object({
       winner: z.string().optional(),
     })
     .optional(),
-  userMessage: z.string().optional(),
   aiModel: z.string().min(1).optional(),
 });

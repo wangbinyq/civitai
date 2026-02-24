@@ -23,7 +23,7 @@ import { trpc } from '~/utils/trpc';
 
 type AuctionBaseItem = GetAuctionBasesReturn['items'][number];
 
-const editSchema = updateAuctionBaseInput;
+const editSchema = updateAuctionBaseInput.omit({ id: true });
 
 function EditAuctionBaseModal({
   item,
@@ -38,7 +38,6 @@ function EditAuctionBaseModal({
   const form = useForm({
     schema: editSchema,
     defaultValues: {
-      id: item.id,
       quantity: item.quantity,
       minPrice: item.minPrice,
       active: item.active,
@@ -57,7 +56,7 @@ function EditAuctionBaseModal({
 
   return (
     <Modal opened={opened} onClose={onClose} title={`Edit: ${item.name}`} size="md">
-      <Form form={form} onSubmit={(data) => updateMutation.mutate(data)}>
+      <Form form={form} onSubmit={(data) => updateMutation.mutate({ ...data, id: item.id })}>
         <Stack>
           <InputNumber name="quantity" label="Slots (quantity)" min={1} />
           <InputNumber name="minPrice" label="Min Price (Buzz)" min={1} />
