@@ -307,8 +307,14 @@ function resolveWorkflowFromParams(
         return 'txt2img';
       case 'txt2vid':
         return 'txt2vid';
-      default:
-        return process;
+      default: {
+        // Map comfy-format keys (e.g. img2img-hires) to graph keys (img2img:hires-fix).
+        // Step 1 only handles stepType === 'comfy' (legacy metadata); the legacy form
+        // passes stepType as the workflow definition type ('txt2img'/'img2img'), so
+        // comfy keys that reach here need mapping too.
+        const mapped = COMFY_KEY_TO_WORKFLOW[process];
+        return mapped ?? process;
+      }
     }
   }
 

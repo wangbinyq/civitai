@@ -99,7 +99,7 @@ export const seedreamGraph = new DataGraph<{ ecosystem: string; workflow: string
     },
     ['model']
   )
-  .node('cfgScale', sliderNode({ min: 1, max: 20, defaultValue: 5 }))
+  .node('cfgScale', sliderNode({ min: 1, max: 20, defaultValue: 5, step: 0.5 }))
   .node('seed', seedNode());
 
 // Export version options for use in components

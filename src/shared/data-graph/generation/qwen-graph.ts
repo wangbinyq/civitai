@@ -114,7 +114,7 @@ export const qwenGraph = new DataGraph<{ ecosystem: string; workflow: string }, 
   .node('aspectRatio', aspectRatioNode({ options: qwenAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    sliderNode({ min: 2, max: 20, defaultValue: 3.5 })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, step: 0.5 })
   )
   .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());

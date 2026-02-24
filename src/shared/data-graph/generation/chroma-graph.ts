@@ -81,7 +81,7 @@ export const chromaGraph = new DataGraph<{ ecosystem: string; workflow: string }
   .node('aspectRatio', aspectRatioNode({ options: chromaAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: chromaGuidancePresets })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, step: 0.5, presets: chromaGuidancePresets })
   )
   .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());

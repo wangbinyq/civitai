@@ -113,7 +113,7 @@ const standardModeBaseGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: fluxGuidancePresets })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, step: 0.5, presets: fluxGuidancePresets })
   )
   .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());
@@ -125,7 +125,7 @@ const proModeGraph = new DataGraph<FluxModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: fluxAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: fluxGuidancePresets })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, step: 0.5, presets: fluxGuidancePresets })
   )
   .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());

@@ -95,7 +95,7 @@ const baseModeGraph = new DataGraph<Flux2ModeCtx, GenerationCtx>()
   .node('aspectRatio', aspectRatioNode({ options: flux2AspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: flux2GuidancePresets })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, step: 0.5, presets: flux2GuidancePresets })
   )
   .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 25 }))
   .node('seed', seedNode());

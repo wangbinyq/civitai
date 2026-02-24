@@ -730,31 +730,6 @@ export async function generateFromGraph({
 // =============================================================================
 
 /**
- * Applies placeholder defaults for non-cost-affecting fields in what-if requests.
- * This allows cost estimation before the user fills in all required fields
- * (e.g., before typing a prompt or uploading a source image).
- *
- * Only fills fields that don't affect cost:
- * - prompt: text content doesn't affect pricing
- * - images: specific source image doesn't affect pricing for ecosystem workflows
- *
- * Does NOT fill placeholders for standalone enhancement workflows (upscale,
- * remove-background, vid2vid) where source media dimensions affect cost.
- */
-function applyWhatIfDefaults(input: Record<string, unknown>): Record<string, unknown> {
-  const result = { ...input };
-  const workflow = result.workflow as string | undefined;
-  if (!workflow) return result;
-
-  result.prompt = 'cost estimation';
-
-  // Video-input workflows (vid2vid:*) are standalone and need actual video metadata
-  // for cost calculation (dimensions * scaleFactor, fps * interpolationFactor), so no defaults
-
-  return result;
-}
-
-/**
  * Submits a what-if request using generation-graph input.
  * Returns cost estimation without actually running the generation.
  *
@@ -768,7 +743,7 @@ export async function whatIfFromGraph({
   token,
   currencies,
 }: WhatIfOptions) {
-  const data = validateInput(applyWhatIfDefaults(normalizeInput(input)), externalCtx);
+  const data = validateInput(normalizeInput(input), externalCtx);
   const step = await createWorkflowStepFromGraph({
     data,
     isWhatIf: true,

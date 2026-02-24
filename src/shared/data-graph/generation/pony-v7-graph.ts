@@ -80,7 +80,7 @@ export const ponyV7Graph = new DataGraph<{ ecosystem: string; workflow: string }
   .node('aspectRatio', aspectRatioNode({ options: ponyV7AspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    sliderNode({ min: 2, max: 20, defaultValue: 3.5, presets: ponyV7GuidancePresets })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, step: 0.5, presets: ponyV7GuidancePresets })
   )
   .node(
     'steps',

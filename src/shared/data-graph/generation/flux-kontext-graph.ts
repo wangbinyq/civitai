@@ -99,7 +99,7 @@ export const fluxKontextGraph = new DataGraph<
   .node('aspectRatio', aspectRatioNode({ options: fluxKontextAspectRatios, defaultValue: '1:1' }))
   .node(
     'cfgScale',
-    sliderNode({ min: 2, max: 20, defaultValue: 3.5 })
+    sliderNode({ min: 2, max: 20, defaultValue: 3.5, step: 0.5 })
   )
   .node('seed', seedNode());
 

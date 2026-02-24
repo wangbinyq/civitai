@@ -133,7 +133,7 @@ const baseModeGraph = new DataGraph<Flux2KleinModeCtx, GenerationCtx>()
   .node('negativePrompt', negativePromptNode())
   .node('sampler', samplerNode({ options: flux2KleinSamplers, defaultValue: 'euler' }))
   .node('scheduler', schedulerNode({ options: flux2KleinSchedules, defaultValue: 'simple' }))
-  .node('cfgScale', sliderNode({ min: 2, max: 20, defaultValue: 7 }))
+  .node('cfgScale', sliderNode({ min: 2, max: 20, defaultValue: 7, step: 0.5 }))
   .node('steps', sliderNode({ min: 20, max: 50, defaultValue: 30 }))
   .node('seed', seedNode());
 
