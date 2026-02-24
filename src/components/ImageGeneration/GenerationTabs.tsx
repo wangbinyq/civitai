@@ -28,11 +28,25 @@ import { useIsClient } from '~/providers/IsClientProvider';
 import { useFeatureFlags } from '~/providers/FeatureFlagsProvider';
 import { LegacyActionIcon } from '~/components/LegacyActionIcon/LegacyActionIcon';
 import { useGenerationPanelStore } from '~/store/generation-panel.store';
+import { getAllEcosystemVersionIdsForPrefetch } from '~/components/generation_v2/GenerationFormProvider';
+import { ResourceDataProvider } from '~/components/generation_v2/inputs/ResourceDataProvider';
 import { useLegacyGeneratorStore } from '~/store/legacy-generator.store';
 
 type GenerationPanelView = 'queue' | 'generate' | 'feed';
 
 export default function GenerationTabs({ fullScreen }: { fullScreen?: boolean }) {
+  // Pre-seed the ResourceDataProvider with ecosystem defaults + last-used models.
+  // The provider keeps resources alive across tab switches and fires the initial
+  // query before form IDs are added — giving the compatibility modal a cache hit.
+  const initialIds = useMemo(() => getAllEcosystemVersionIdsForPrefetch(), []);
+  return (
+    <ResourceDataProvider initialIds={initialIds}>
+      <GenerationTabsContent fullScreen={fullScreen} />
+    </ResourceDataProvider>
+  );
+}
+
+function GenerationTabsContent({ fullScreen }: { fullScreen?: boolean }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
   const features = useFeatureFlags();

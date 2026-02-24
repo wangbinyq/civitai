@@ -170,10 +170,11 @@ export const veo3Graph = new DataGraph<Veo3Ctx, GenerationCtx>()
         output: z.number(),
         defaultValue: 8,
         meta: {
-          options: isImg2Vid
-            ? [{ label: '8 seconds', value: 8 }] // Only show 8s option for img2vid
-            : veo3Durations,
-          disabled: isImg2Vid,
+          options: veo3Durations,
+          // options: isImg2Vid
+          //   ? [{ label: '8 seconds', value: 8 }] // Only show 8s option for img2vid
+          //   : veo3Durations,
+          // disabled: isImg2Vid,
         },
         // Force duration to 8s when workflow changes to img2vid
         transform: (value: number) => (isImg2Vid ? 8 : value),

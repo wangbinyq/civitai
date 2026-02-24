@@ -112,7 +112,7 @@ function ResourceItem({
   if (!displayResource) {
     return (
       <div
-        className={clsx('px-3 py-1.5', {
+        className={clsx('px-2 py-1.5', {
           'bg-gray-2 dark:bg-dark-5': isOdd,
         })}
       >
@@ -128,7 +128,7 @@ function ResourceItem({
 
   return (
     <div
-      className={clsx('px-3 py-1.5', {
+      className={clsx('px-2 py-1.5', {
         'bg-gray-2 dark:bg-dark-5': isOdd && !hasStatusStyling,
         [statusClasses.background ?? '']: hasStatusStyling,
       })}

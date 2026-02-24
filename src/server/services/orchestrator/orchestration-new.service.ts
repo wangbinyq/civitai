@@ -235,7 +235,7 @@ function collectResourceIds(data: GenerationGraphOutput): ResourceRef[] {
   return refs;
 }
 
-/** Enriched resource with air string */
+/** Enriched resource with air string (always populated by getResourceData) */
 type EnrichedResource = GenerationResource & { air: string };
 
 /** Result of resource validation */
@@ -299,13 +299,7 @@ async function validateAndEnrichResources(
     );
   }
 
-  // Build enriched resources with AIR strings
-  const enrichedResources: EnrichedResource[] = resources.map((r) => ({
-    ...r,
-    air: `urn:air:${getEcosystemName(r.baseModel)}:${r.model.type.toLowerCase()}:civitai:${
-      r.model.id
-    }@${r.id}`,
-  }));
+  const enrichedResources: EnrichedResource[] = resources;
 
   return {
     enrichedResources,

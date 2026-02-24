@@ -14,8 +14,12 @@
 import { Anchor, Badge, Group, HoverCard, Text, ThemeIcon } from '@mantine/core';
 import { IconAlertTriangle, IconBan, IconLock, IconShield } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
+import { EdgeMedia2 } from '~/components/EdgeMedia/EdgeMedia';
+import { ImageGuard2 } from '~/components/ImageGuard/ImageGuard2';
+import { MediaHash } from '~/components/ImageHash/ImageHash';
 import { NumberSlider } from '~/libs/form/components/NumberSlider';
 import { useAppContext } from '~/providers/AppProvider';
+import { getRootEcosystem } from '~/shared/constants/basemodel.constants';
 import type { GenerationResource } from '~/shared/types/generation.types';
 import type { ResourceSelectOptions } from '~/components/ImageGeneration/GenerationForm/resource-select.types';
 
@@ -38,6 +42,8 @@ export interface ResourceItemContentProps {
   actions?: ReactNode;
   /** Whether to show the strength slider */
   showStrength?: boolean;
+  /** Override whether the model name is rendered as a clickable link. Defaults to shouldShowModelLink(resource). */
+  showLink?: boolean;
 }
 
 export type ResourceStatus = 'compatible' | 'partial' | 'incompatible' | 'private' | 'unavailable';
@@ -150,6 +156,7 @@ export function ResourceItemContent({
   options,
   actions,
   showStrength = true,
+  showLink: showLinkProp,
 }: ResourceItemContentProps) {
   const { domain } = useAppContext();
   const status = getResourceStatus(resource, options);
@@ -170,21 +177,46 @@ export function ResourceItemContent({
   const isSameMinMaxStrength = resource.minStrength === resource.maxStrength;
 
   const modelUrl = `/models/${resource.model.id}?modelVersionId=${resource.id}`;
-  const showLink = shouldShowModelLink(resource);
+  const showLink = (showLinkProp ?? true) && shouldShowModelLink(resource);
+
+  let ecosystemName: string;
+  try {
+    ecosystemName = getRootEcosystem(resource.baseModel).name;
+  } catch {
+    ecosystemName = resource.baseModel;
+  }
 
   return (
     <>
       <Group gap="xs" justify="space-between" wrap="nowrap">
-        <Group gap={4} wrap="nowrap" className="min-w-0 flex-1">
-          {/* Hide link for private/unpublished resources not owned by the current user */}
+        {resource.image && (
+          <div className="size-14 shrink-0 overflow-hidden rounded">
+            <ImageGuard2 image={resource.image} connectType="model" connectId={resource.model.id}>
+              {(safe) =>
+                !safe ? (
+                  <MediaHash {...resource.image} />
+                ) : (
+                  <EdgeMedia2
+                    src={resource.image!.url}
+                    type={resource.image!.type}
+                    metadata={null}
+                    width={450}
+                    className="size-full object-cover"
+                  />
+                )
+              }
+            </ImageGuard2>
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          {/* Model name — first line */}
           {showLink ? (
             <Anchor
               href={modelUrl}
               target="_blank"
               size="sm"
-              lineClamp={1}
               fw={590}
-              className="truncate"
+              className="block w-fit max-w-full truncate"
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
               {resource.model.name}
@@ -194,79 +226,85 @@ export function ResourceItemContent({
               {resource.model.name}
             </Text>
           )}
-          {resource.name && resource.model.name.toLowerCase() !== resource.name.toLowerCase() && (
-            <Text size="xs" c="dimmed" className="shrink-0">
-              ({resource.name})
-            </Text>
-          )}
-          {epochDetails?.epochNumber && (
-            <Badge size="sm" color="dark.5" variant="filled" className="shrink-0">
-              Epoch {epochDetails.epochNumber}
-            </Badge>
-          )}
-          {isSfwOnly && (
-            <HoverCard position="bottom" withArrow width={200}>
-              <HoverCard.Target>
-                <ThemeIcon size={18} color="green.5" variant="filled" className="shrink-0">
-                  <IconShield size={14} />
-                </ThemeIcon>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Text size="sm">This resource cannot be used to generate mature content</Text>
-              </HoverCard.Dropdown>
-            </HoverCard>
-          )}
-          {isPartiallyCompatible && (
-            <HoverCard position="bottom" withArrow width={200}>
-              <HoverCard.Target>
-                <ThemeIcon size={18} color="yellow.7" variant="filled" className="shrink-0">
-                  <IconAlertTriangle size={14} />
-                </ThemeIcon>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Text size="sm">
-                  This resource may not be fully supported with the current base model
-                </Text>
-              </HoverCard.Dropdown>
-            </HoverCard>
-          )}
-          {isIncompatible && (
-            <HoverCard position="bottom" withArrow width={200}>
-              <HoverCard.Target>
-                <ThemeIcon size={18} color="red" variant="filled" className="shrink-0">
-                  <IconAlertTriangle size={14} />
-                </ThemeIcon>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Text size="sm">This resource is not compatible with the current base model</Text>
-              </HoverCard.Dropdown>
-            </HoverCard>
-          )}
-          {isPrivate && (
-            <HoverCard position="bottom" withArrow width={200}>
-              <HoverCard.Target>
-                <ThemeIcon size={18} color="red" variant="filled" className="shrink-0">
-                  <IconLock size={14} />
-                </ThemeIcon>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Text size="sm">This resource is private. You cannot use it for generation.</Text>
-              </HoverCard.Dropdown>
-            </HoverCard>
-          )}
-          {isUnavailable && (
-            <HoverCard position="bottom" withArrow width={200}>
-              <HoverCard.Target>
-                <ThemeIcon size={18} color="red" variant="filled" className="shrink-0">
-                  <IconBan size={14} />
-                </ThemeIcon>
-              </HoverCard.Target>
-              <HoverCard.Dropdown>
-                <Text size="sm">This resource is not available for generation.</Text>
-              </HoverCard.Dropdown>
-            </HoverCard>
-          )}
-        </Group>
+          {/* Version name + warnings — second line */}
+          <Group gap={4} wrap="nowrap">
+            {/* <Badge size="xs" variant="outline" color="gray" className="shrink-0">
+              {ecosystemName}
+            </Badge> */}
+            {resource.name && resource.model.name.toLowerCase() !== resource.name.toLowerCase() && (
+              <Text size="xs" c="dimmed" className="shrink-0">
+                ({resource.name})
+              </Text>
+            )}
+            {epochDetails?.epochNumber && (
+              <Badge size="sm" color="dark.5" variant="filled" className="shrink-0">
+                Epoch {epochDetails.epochNumber}
+              </Badge>
+            )}
+            {isSfwOnly && (
+              <HoverCard position="bottom" withArrow width={200}>
+                <HoverCard.Target>
+                  <ThemeIcon size={18} color="green.5" variant="filled" className="shrink-0">
+                    <IconShield size={14} />
+                  </ThemeIcon>
+                </HoverCard.Target>
+                <HoverCard.Dropdown>
+                  <Text size="sm">This resource cannot be used to generate mature content</Text>
+                </HoverCard.Dropdown>
+              </HoverCard>
+            )}
+            {isPartiallyCompatible && (
+              <HoverCard position="bottom" withArrow width={200}>
+                <HoverCard.Target>
+                  <ThemeIcon size={18} color="yellow.7" variant="filled" className="shrink-0">
+                    <IconAlertTriangle size={14} />
+                  </ThemeIcon>
+                </HoverCard.Target>
+                <HoverCard.Dropdown>
+                  <Text size="sm">
+                    This resource may not be fully supported with the current base model
+                  </Text>
+                </HoverCard.Dropdown>
+              </HoverCard>
+            )}
+            {isIncompatible && (
+              <HoverCard position="bottom" withArrow width={200}>
+                <HoverCard.Target>
+                  <ThemeIcon size={18} color="red" variant="filled" className="shrink-0">
+                    <IconAlertTriangle size={14} />
+                  </ThemeIcon>
+                </HoverCard.Target>
+                <HoverCard.Dropdown>
+                  <Text size="sm">This resource is not compatible with the current base model</Text>
+                </HoverCard.Dropdown>
+              </HoverCard>
+            )}
+            {isPrivate && (
+              <HoverCard position="bottom" withArrow width={200}>
+                <HoverCard.Target>
+                  <ThemeIcon size={18} color="red" variant="filled" className="shrink-0">
+                    <IconLock size={14} />
+                  </ThemeIcon>
+                </HoverCard.Target>
+                <HoverCard.Dropdown>
+                  <Text size="sm">This resource is private. You cannot use it for generation.</Text>
+                </HoverCard.Dropdown>
+              </HoverCard>
+            )}
+            {isUnavailable && (
+              <HoverCard position="bottom" withArrow width={200}>
+                <HoverCard.Target>
+                  <ThemeIcon size={18} color="red" variant="filled" className="shrink-0">
+                    <IconBan size={14} />
+                  </ThemeIcon>
+                </HoverCard.Target>
+                <HoverCard.Dropdown>
+                  <Text size="sm">This resource is not available for generation.</Text>
+                </HoverCard.Dropdown>
+              </HoverCard>
+            )}
+          </Group>
+        </div>
         {actions && (
           <Group gap={4} className="shrink-0">
             {actions}

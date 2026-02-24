@@ -13,6 +13,7 @@ import { createLocalStorageAdapter } from '~/libs/data-graph/storage-adapter';
 import { generationGraph, type GenerationCtx } from '~/shared/data-graph/generation';
 import type { ResourceData } from '~/shared/data-graph/generation/common';
 import {
+  allEcosystemDefaultVersionIds,
   ecosystemByKey,
   ecosystemById,
   getGenerationSupport,
@@ -32,7 +33,7 @@ import { useGenerationGraphStore, generationGraphStore } from '~/store/generatio
 import { workflowPreferences } from '~/store/workflow-preferences.store';
 
 import { openCompatibilityConfirmModal } from './CompatibilityConfirmModal';
-import { ResourceDataProvider, useResourceDataContext } from './inputs/ResourceDataProvider';
+import { useResourceDataContext } from './inputs/ResourceDataProvider';
 import { WhatIfProvider } from './WhatIfProvider';
 import { needsHydration, type PartialResourceValue } from './inputs/resource-select.utils';
 
@@ -87,6 +88,46 @@ export function clearStorageForOutput(outputType: 'image' | 'video') {
       localStorage.removeItem(`${STORAGE_KEY}.ecosystem.${group.id}`);
       clearedGroups.add(group.id);
     }
+  }
+}
+
+/**
+ * Returns all model version IDs to prefetch for the compatibility modal:
+ * ecosystem defaults + last-used checkpoints for every ecosystem in localStorage.
+ *
+ * Both GenerationTabs (prefetch) and the modal use this function so their
+ * query keys always match, guaranteeing an instant cache hit when the modal opens.
+ */
+export function getAllEcosystemVersionIdsForPrefetch(): number[] {
+  const ids = new Set(allEcosystemDefaultVersionIds);
+  for (const [key] of ecosystemByKey) {
+    const lastUsedId = getLastUsedCheckpointIdForEcosystem(key);
+    if (lastUsedId) ids.add(lastUsedId);
+  }
+  return [...ids];
+}
+
+/**
+ * Returns the last-used model version ID for a given ecosystem key.
+ * Reads from the ecosystem-scoped localStorage entry written by the storage adapter.
+ * Returns undefined if no previous selection exists.
+ */
+export function getLastUsedCheckpointIdForEcosystem(ecosystemKey: string): number | undefined {
+  if (typeof localStorage === 'undefined') return undefined;
+  const eco = ecosystemByKey.get(ecosystemKey);
+  if (!eco) return undefined;
+
+  const group = getEcosystemGroup(eco.id);
+  const scopeKey = group ? group.id : eco.key;
+
+  try {
+    const stored = localStorage.getItem(`${STORAGE_KEY}.ecosystem.${scopeKey}`);
+    if (!stored) return undefined;
+    const values = JSON.parse(stored) as Record<string, unknown>;
+    const modelId = (values?.model as { id?: unknown } | undefined)?.id;
+    return typeof modelId === 'number' ? modelId : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -406,10 +447,8 @@ export function GenerationFormProvider({
   skipStorage = false,
 }: GenerationFormProviderProps) {
   return (
-    <ResourceDataProvider>
-      <InnerProvider defaultValues={defaultValues} debug={debug} skipStorage={skipStorage}>
-        {children}
-      </InnerProvider>
-    </ResourceDataProvider>
+    <InnerProvider defaultValues={defaultValues} debug={debug} skipStorage={skipStorage}>
+      {children}
+    </InnerProvider>
   );
 }

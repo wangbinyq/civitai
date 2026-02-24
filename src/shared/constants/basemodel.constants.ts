@@ -982,7 +982,7 @@ export const ecosystemSettings: EcosystemSettings[] = [
   {
     ecosystemId: ECO.LTXV2,
     defaults: {
-      model: { id: 2734043 },
+      model: { id: 2578325 },
       modelLocked: true,
     },
   },
@@ -2502,6 +2502,16 @@ export function getEcosystemSetting<K extends keyof NonNullable<EcosystemSetting
 
   return undefined;
 }
+
+/**
+ * All unique default model version IDs across every ecosystem that has one.
+ * Used to prefetch resource data for the compatibility confirm modal.
+ */
+export const allEcosystemDefaultVersionIds: number[] = [
+  ...new Set(
+    ecosystemSettings.flatMap((s) => (s.defaults?.model?.id ? [s.defaults.model.id] : []))
+  ),
+];
 
 /**
  * Check if a model is supported for a given support type

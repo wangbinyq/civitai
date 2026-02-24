@@ -71,6 +71,7 @@ import { ResourceAlerts, ExperimentalModelAlert, ReadyAlert } from './ResourceAl
 import { BaseModelInput } from './inputs/BaseModelInput';
 import { WorkflowInput, SelectedWorkflowDisplay } from './inputs/WorkflowInput';
 import { ResourceSelectInput } from './inputs/ResourceSelectInput';
+import { useResourceDataContext } from './inputs/ResourceDataProvider';
 import { ResourceSelectMultipleInput } from './inputs/ResourceSelectMultipleInput';
 import { PromptInput } from './inputs/PromptInput';
 import { AspectRatioInput } from './inputs/AspectRatioInput';
@@ -321,9 +322,6 @@ export function GenerationForm() {
               graph={graph}
               name="model"
               render={({ value, meta, onChange }) => {
-                const hasHierarchicalVersions = meta.versions?.options.some(
-                  (o: VersionOption) => o.children
-                );
                 return (
                   <>
                     <ResourceSelectInput
@@ -345,10 +343,9 @@ export function GenerationForm() {
                           ? () => onChange({ id: meta.defaultModelId } as any)
                           : undefined
                       }
-                      versions={!hasHierarchicalVersions ? meta.versions?.options : undefined}
                     />
                     {/* Hierarchical version selectors (e.g., precision/variant for HiDream) */}
-                    {hasHierarchicalVersions && meta.versions && (
+                    {meta.versions && (
                       <VersionGroupSelector
                         versions={meta.versions}
                         modelId={(value as any)?.id}
@@ -797,27 +794,27 @@ export function GenerationForm() {
             }
           />
 
+          {/* Resolution (Wan/Sora video quality) */}
+          <Controller
+            graph={graph}
+            name="resolution"
+            render={({ value, meta, onChange }) => (
+              <div className="flex flex-col gap-1">
+                <Input.Label>Resolution</Input.Label>
+                <SegmentedControlWrapper
+                  value={value}
+                  onChange={(v) => onChange(v as typeof value)}
+                  data={meta.options.map((o: { label: string; value: string }) => ({
+                    label: o.label,
+                    value: o.value,
+                  }))}
+                />
+              </div>
+            )}
+          />
+
           {/* Advanced section */}
           <AccordionLayout label="Advanced" storeKey="data-graph-v2-advanced">
-            {/* Resolution (Wan/Sora video quality) */}
-            <Controller
-              graph={graph}
-              name="resolution"
-              render={({ value, meta, onChange }) => (
-                <div className="flex flex-col gap-1">
-                  <Input.Label>Resolution</Input.Label>
-                  <SegmentedControlWrapper
-                    value={value}
-                    onChange={(v) => onChange(v as typeof value)}
-                    data={meta.options.map((o: { label: string; value: string }) => ({
-                      label: o.label,
-                      value: o.value,
-                    }))}
-                  />
-                </div>
-              )}
-            />
-
             {/* CFG Scale / Guidance - label varies by model family */}
             <Controller
               graph={graph}
@@ -1227,6 +1224,24 @@ function VersionGroupSelector({
   onChange: (value: { id: number }) => void;
 }) {
   const allIds = useMemo(() => getAllVersionIds(versions), [versions]);
+  const { registerResourceId, unregisterResourceId, getResourceData } = useResourceDataContext();
+
+  // Pre-register all version IDs for batch-fetching
+  useEffect(() => {
+    if (allIds.size === 0) return;
+    allIds.forEach(registerResourceId);
+    return () => {
+      allIds.forEach(unregisterResourceId);
+    };
+  }, [allIds, registerResourceId, unregisterResourceId]);
+
+  const handleChange = useCallback(
+    (id: number) => {
+      const resourceData = getResourceData(id);
+      onChange(resourceData ?? { id });
+    },
+    [getResourceData, onChange]
+  );
 
   // Only render if current model is a known version in the tree
   if (!modelId || !allIds.has(modelId)) return null;
@@ -1255,7 +1270,7 @@ function VersionGroupSelector({
           key={level.group.label ?? i}
           group={level.group}
           selectedValue={level.selectedValue}
-          onChange={(id) => onChange({ id })}
+          onChange={handleChange}
         />
       ))}
       {/* Leaf level: inline button group, fills remaining width */}
@@ -1263,7 +1278,7 @@ function VersionGroupSelector({
         <ButtonGroupInput
           className="flex-1"
           value={leaf.selectedValue.toString()}
-          onChange={(v) => onChange({ id: Number(v) })}
+          onChange={(v) => handleChange(Number(v))}
           data={leaf.group.options.map((o) => ({ label: o.label, value: o.value.toString() }))}
         />
       )}

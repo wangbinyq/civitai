@@ -6,8 +6,9 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Button, Card, Group, Modal, Radio, Stack, Text } from '@mantine/core';
+import { Badge, Button, Card, Group, Modal, Paper, Stack, Text } from '@mantine/core';
 import { IconArrowRight } from '@tabler/icons-react';
+import clsx from 'clsx';
 
 import { useDialogContext } from '~/components/Dialog/DialogProvider';
 import { dialogStore } from '~/components/Dialog/dialogStore';
@@ -17,7 +18,11 @@ import {
   ecosystemByKey,
   getEcosystemGroup,
   getEcosystemGroupByKey,
+  getEcosystemSetting,
 } from '~/shared/constants/basemodel.constants';
+import { ResourceItemContent } from '~/components/generation_v2/inputs/ResourceItemContent';
+import { getLastUsedCheckpointIdForEcosystem } from '~/components/generation_v2/GenerationFormProvider';
+import { useResourceDataStore } from '~/store/resource-data.store';
 
 // =============================================================================
 // Types
@@ -146,6 +151,38 @@ function CompatibilityConfirmModalContent({
     );
   }, [isWorkflowChange, pendingChange]);
 
+  // Map: ecosystemKey → last-used version ID from localStorage
+  const lastUsedVersionIdByKey = useMemo(() => {
+    if (!isWorkflowChange) return new Map<string, number>();
+    const map = new Map<string, number>();
+    for (const option of ecosystemOptions) {
+      const lastUsedId = getLastUsedCheckpointIdForEcosystem(option.ecosystemKey);
+      if (lastUsedId) map.set(option.ecosystemKey, lastUsedId);
+    }
+    return map;
+  }, [isWorkflowChange, ecosystemOptions]);
+
+  // Read from the global resource cache — resources are pre-fetched at GenerationTabs mount
+  const storeResources = useResourceDataStore((state) => state.resources);
+
+  // Version ID to show per ecosystem: prefer last-used (once loaded), fall back to default
+  const versionIdByKey = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const option of ecosystemOptions) {
+      const eco = ecosystemByKey.get(option.ecosystemKey);
+      if (!eco) continue;
+      const lastUsedId = lastUsedVersionIdByKey.get(option.ecosystemKey);
+      const defaultId = getEcosystemSetting(eco.id, 'model')?.id;
+      // Use last-used only when its resource has already loaded; otherwise show default
+      if (lastUsedId && storeResources.has(lastUsedId)) {
+        map.set(option.ecosystemKey, lastUsedId);
+      } else if (defaultId) {
+        map.set(option.ecosystemKey, defaultId);
+      }
+    }
+    return map;
+  }, [ecosystemOptions, lastUsedVersionIdByKey, storeResources]);
+
   const [selectedEcosystemKey, setSelectedEcosystemKey] = useState(() => {
     if (!isWorkflowChange) return '';
     // Find option matching the default, or fall back to first option
@@ -161,11 +198,13 @@ function CompatibilityConfirmModalContent({
     : undefined;
 
   const currentWorkflowLabel = !isWorkflowChange
-    ? workflowOptionById.get(pendingChange.currentWorkflowId)?.label ?? pendingChange.currentWorkflowId
+    ? workflowOptionById.get(pendingChange.currentWorkflowId)?.label ??
+      pendingChange.currentWorkflowId
     : undefined;
 
   const targetWorkflowLabel = !isWorkflowChange
-    ? workflowOptionById.get(pendingChange.targetWorkflowId)?.label ?? pendingChange.targetWorkflowId
+    ? workflowOptionById.get(pendingChange.targetWorkflowId)?.label ??
+      pendingChange.targetWorkflowId
     : undefined;
 
   // Resolve ecosystem labels - use group names when available
@@ -209,8 +248,8 @@ function CompatibilityConfirmModalContent({
       <Stack gap="md">
         {isWorkflowChange && pendingChange.incompatible ? (
           <Text size="sm">
-            <strong>{workflowLabel}</strong> is not available for{' '}
-            <strong>{currentEcoLabel}</strong>. Select a compatible ecosystem:
+            <strong>{workflowLabel}</strong> is not available for <strong>{currentEcoLabel}</strong>
+            . Select a compatible ecosystem:
           </Text>
         ) : !isWorkflowChange ? (
           <Text size="sm">
@@ -220,17 +259,54 @@ function CompatibilityConfirmModalContent({
         ) : null}
 
         {isWorkflowChange ? (
-          <Radio.Group value={selectedEcosystemKey} onChange={setSelectedEcosystemKey}>
-            <Stack gap="xs">
-              {ecosystemOptions.map((option, index) => (
-                <Radio
+          <Stack gap="xs">
+            {ecosystemOptions.map((option) => {
+              const versionId = versionIdByKey.get(option.ecosystemKey);
+              const resource = versionId ? storeResources.get(versionId) : undefined;
+              const isSelected = selectedEcosystemKey === option.ecosystemKey;
+              const sharedClasses = clsx(
+                'cursor-pointer rounded-sm border border-solid',
+                isSelected
+                  ? 'border-blue-5 bg-blue-1 dark:bg-blue-9/20'
+                  : 'border-gray-3 hover:bg-gray-0 dark:border-dark-4 dark:hover:bg-dark-6'
+              );
+
+              if (!resource) {
+                return (
+                  <Paper
+                    key={option.id}
+                    p="sm"
+                    className={sharedClasses}
+                    onClick={() => setSelectedEcosystemKey(option.ecosystemKey)}
+                  >
+                    <Text size="sm" fw={500}>
+                      {option.label}
+                    </Text>
+                  </Paper>
+                );
+              }
+
+              return (
+                <Paper
                   key={option.id}
-                  value={option.ecosystemKey}
-                  label={option.label}
-                />
-              ))}
-            </Stack>
-          </Radio.Group>
+                  p="xs"
+                  className={sharedClasses}
+                  onClick={() => setSelectedEcosystemKey(option.ecosystemKey)}
+                >
+                  <ResourceItemContent
+                    resource={resource}
+                    showLink={false}
+                    showStrength={false}
+                    actions={
+                      <Badge size="xs" variant="light" color="gray" className="shrink-0">
+                        {option.label}
+                      </Badge>
+                    }
+                  />
+                </Paper>
+              );
+            })}
+          </Stack>
         ) : (
           <Card withBorder p="sm" className="bg-gray-0 dark:bg-dark-6">
             <Group gap="sm" wrap="nowrap">

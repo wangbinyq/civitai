@@ -29,6 +29,12 @@ import {
 // Constants
 // =============================================================================
 
+/** LTXV2 model version options */
+const ltxv2VersionOptions = [
+  { label: '19B Dev', value: 2578325 },
+  { label: '19B Distilled', value: 2600562 },
+];
+
 /** LTXV2 aspect ratio options */
 const ltxv2AspectRatios = [
   { label: '16:9', value: '16:9', width: 848, height: 480 },
@@ -68,8 +74,15 @@ export const ltxv2Graph = new DataGraph<LTXV2Ctx, GenerationCtx>()
     ['workflow']
   )
 
-  // Merge checkpoint graph (model node with locked model from ecosystem settings)
-  .merge(createCheckpointGraph())
+  // Merge checkpoint graph with version options
+  .merge(
+    () =>
+      createCheckpointGraph({
+        versions: { options: ltxv2VersionOptions },
+        defaultModelId: ltxv2VersionOptions[0].value,
+      }),
+    []
+  )
 
   // Seed node
   .node('seed', seedNode())

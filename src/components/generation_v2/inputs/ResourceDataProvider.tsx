@@ -1,21 +1,31 @@
 /**
  * ResourceDataProvider
  *
- * Context provider for batch-fetching resource data by IDs.
- * Components can register resource IDs they need, and the provider
- * batches them into a single tRPC query.
+ * Context provider that coordinates resource data fetching for generation form
+ * components. Components register the IDs they need; the provider batches them
+ * and fetches only IDs not already in the global resource-data store.
+ *
+ * Fetching is done via requestResourceIds (direct fetch, same pattern as
+ * fetchGenerationData) rather than a tRPC useQuery hook. This avoids React
+ * Query cache-key churn: adding one ID no longer refetches all others.
+ *
+ * The CompatibilityConfirmModal reads from useResourceDataStore directly
+ * since it renders outside this provider tree.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { GenerationResource } from '~/shared/types/generation.types';
-import { trpc } from '~/utils/trpc';
+import {
+  useResourceDataStore,
+  requestResourceIds,
+  type ResourceData,
+} from '~/store/resource-data.store';
+
+// Re-export so existing consumers don't need to change their import paths.
+export type { ResourceData };
 
 // =============================================================================
 // Types
 // =============================================================================
-
-/** Resource data with AIR identifier */
-export type ResourceData = GenerationResource & { air: string };
 
 export interface ResourceDataContextValue {
   /** Register a resource ID to be fetched */
@@ -24,7 +34,7 @@ export interface ResourceDataContextValue {
   unregisterResourceId: (id: number) => void;
   /** Get resource data by ID (returns undefined if not loaded) */
   getResourceData: (id: number) => ResourceData | undefined;
-  /** All fetched resources (for external context) */
+  /** All fetched resources for the IDs registered in this provider */
   resources: ResourceData[];
   /** Check if resources are currently loading */
   isLoading: boolean;
@@ -44,27 +54,45 @@ const ResourceDataContext = createContext<ResourceDataContextValue | null>(null)
 
 interface ResourceDataProviderProps {
   children: React.ReactNode;
+  /**
+   * IDs to always include in the fetch, independent of component registrations.
+   * Useful for pre-seeding the cache (e.g. ecosystem defaults at panel mount).
+   * These are never removed, even when unregisterResourceId is called for them.
+   */
+  initialIds?: number[];
 }
 
-export function ResourceDataProvider({ children }: ResourceDataProviderProps) {
+export function ResourceDataProvider({ children, initialIds }: ResourceDataProviderProps) {
   // Track which IDs are registered (using a Map for reference counting)
   const [registeredIds, setRegisteredIds] = useState<Map<number, number>>(new Map());
 
-  // Get unique IDs to fetch
-  const idsToFetch = useMemo(() => Array.from(registeredIds.keys()), [registeredIds]);
-
-  // Batch fetch resources
-  const { data, isLoading, fetchStatus } = trpc.generation.getResourceDataByIds.useQuery(
-    { ids: idsToFetch },
-    {
-      enabled: idsToFetch.length > 0,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
-    }
+  // Combine initialIds (permanent) with component-registered IDs
+  const idsToFetch = useMemo(
+    () => [...new Set([...(initialIds ?? []), ...registeredIds.keys()])],
+    [initialIds, registeredIds]
   );
 
-  // All fetched resources as array
-  const resources = useMemo(() => data ?? [], [data]);
+  // Read from the global store
+  const storeResources = useResourceDataStore((state) => state.resources);
+
+  // IDs not yet in the store
+  const uncachedIds = useMemo(
+    () => idsToFetch.filter((id) => !storeResources.has(id)),
+    [idsToFetch, storeResources]
+  );
+
+  // Fire a batched fetch for uncached IDs whenever the set changes.
+  // requestResourceIds skips IDs already in-flight, so this is safe to call
+  // on every uncachedIds change without risk of duplicate requests.
+  useEffect(() => {
+    if (uncachedIds.length > 0) requestResourceIds(uncachedIds);
+  }, [uncachedIds]);
+
+  // All fetched resources for the IDs this provider cares about (from store)
+  const resources = useMemo(
+    () => idsToFetch.map((id) => storeResources.get(id)).filter(Boolean) as ResourceData[],
+    [idsToFetch, storeResources]
+  );
 
   // Create a map for quick lookup
   const resourceMap = useMemo(() => {
@@ -103,19 +131,14 @@ export function ResourceDataProvider({ children }: ResourceDataProviderProps) {
   // Get resource data by ID
   const getResourceData = useCallback((id: number) => resourceMap.get(id), [resourceMap]);
 
-  // Check if a specific resource is loading
+  // A resource is loading if it's registered but not yet in the store
   const isResourceLoading = useCallback(
-    (id: number) => {
-      if (!registeredIds.has(id)) return false;
-      return isLoading || fetchStatus === 'fetching';
-    },
-    [registeredIds, isLoading, fetchStatus]
+    (id: number) => registeredIds.has(id) && !storeResources.has(id),
+    [registeredIds, storeResources]
   );
 
-  // When no IDs are registered, the query is disabled and React Query keeps
-  // isLoading=true (no data, never fetched). We should report not loading
-  // since there's nothing to wait for.
-  const effectiveIsLoading = idsToFetch.length > 0 && isLoading;
+  // Overall loading: any of our registered IDs not yet in the store
+  const effectiveIsLoading = uncachedIds.some((id) => registeredIds.has(id));
 
   const value = useMemo(
     () => ({
@@ -159,13 +182,9 @@ export function useResourceData(id: number | undefined) {
   const { registerResourceId, unregisterResourceId, getResourceData, isResourceLoading } =
     useResourceDataContext();
 
-  // Register/unregister via effect
-  // Using simple pattern that works correctly with StrictMode's double-invoke
   useEffect(() => {
     if (id == null) return;
-
     registerResourceId(id);
-
     return () => {
       unregisterResourceId(id);
     };

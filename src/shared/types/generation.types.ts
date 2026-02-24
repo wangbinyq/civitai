@@ -1,7 +1,7 @@
 // TODO: ModelVersionEarlyAccessConfig is imported from server - consider moving schema to shared
 // Source: ~/server/schema/model-version.schema.ts (modelVersionEarlyAccessConfigSchema)
 import type { ModelVersionEarlyAccessConfig } from '~/server/schema/model-version.schema';
-import type { Availability, ModelType } from '~/shared/utils/prisma/enums';
+import type { Availability, MediaType, ModelType } from '~/shared/utils/prisma/enums';
 
 type NodeRef = [string, number];
 export type ComfyNode = {
@@ -53,4 +53,13 @@ export type GenerationResource = GenerationResourceBase & {
     isExpired: boolean;
   };
   substitute?: GenerationResourceBase;
+  image?: {
+    id: number;
+    url: string;
+    width: number;
+    height: number;
+    hash: string;
+    type: MediaType;
+    nsfwLevel: number;
+  };
 };

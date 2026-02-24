@@ -68,5 +68,5 @@ export const generationRouter = router({
     ),
   getResourceDataByIds: publicProcedure
     .input(getResourceDataByIdsSchema)
-    .query(({ input, ctx }) => getResourceData(input.ids, ctx.user)),
+    .query(({ input, ctx }) => getResourceData(input.ids, ctx.user, false, true)),
 });

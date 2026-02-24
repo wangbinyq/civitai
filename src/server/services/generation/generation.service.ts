@@ -25,6 +25,7 @@ import { getFilesForModelVersionCache } from '~/server/services/model-file.servi
 import type { GenerationResourceDataModel } from '~/server/redis/resource-data.redis';
 import { resourceDataCache } from '~/server/redis/resource-data.redis';
 import { getFeaturedModels } from '~/server/services/model.service';
+import { imagesForModelVersionsCache } from '~/server/services/image.service';
 import {
   handleLogError,
   throwAuthorizationError,
@@ -259,12 +260,14 @@ export const getGenerationData = async ({
         versionIds: [{ id: query.id, epoch: query.epoch }],
         user,
         generation: query.generation,
+        withPreview: query.withPreview,
       });
     case 'modelVersions':
       return await getModelVersionGenerationData({
         user,
         versionIds: query.ids,
         generation: query.generation,
+        withPreview: query.withPreview,
       });
     default:
       throw new Error('unsupported generation data type');
@@ -372,13 +375,15 @@ const getModelVersionGenerationData = async ({
   versionIds,
   user,
   generation,
+  withPreview = false,
 }: {
   versionIds: { id: number; epoch?: number }[] | number[];
   user?: SessionUser;
   generation: boolean;
+  withPreview?: boolean;
 }): Promise<GenerationData> => {
   if (!versionIds.length) throw new Error('missing version ids');
-  const resources = await getResourceData(versionIds, user, generation);
+  const resources = await getResourceData(versionIds, user, generation, withPreview);
   const checkpoint = resources.find((x) => x.model.type === 'Checkpoint');
   if (checkpoint?.vaeId) {
     const [vae] = await getResourceData([checkpoint.vaeId], user, generation);
@@ -483,7 +488,8 @@ const explicitCoveredModelVersionIds = explicitCoveredModelAirs.map((air) => par
 export async function getResourceData(
   versionIds: { id: number; epoch?: number }[] | number[],
   user: { id?: number; isModerator?: boolean } = {},
-  generation = false
+  generation = false,
+  withPreview = false
 ): Promise<(GenerationResource & { air: string })[]> {
   if (!versionIds.length) return [];
   const args = (
@@ -719,6 +725,24 @@ export async function getResourceData(
         return removeNulls({ ...bringItAllTogether(resource, modelFiles), substitute });
       });
     });
+
+  if (withPreview) {
+    const imageCache = await imagesForModelVersionsCache.fetch(resources.map((r) => r.id));
+    for (const resource of resources as (GenerationResource & { air: string })[]) {
+      const first = imageCache[resource.id]?.images[0];
+      if (first) {
+        resource.image = {
+          id: first.id,
+          url: first.url,
+          width: first.width,
+          height: first.height,
+          hash: first.hash,
+          type: first.type,
+          nsfwLevel: first.nsfwLevel,
+        };
+      }
+    }
+  }
 
   // TODO - check if resource id is in "EcosystemCheckpoint" table
   return generation

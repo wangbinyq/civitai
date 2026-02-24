@@ -274,7 +274,10 @@ export const checkResourcesCoverageSchema = z.object({
   id: z.number(),
 });
 
-const baseSchema = z.object({ generation: booleanString().default(true) });
+const baseSchema = z.object({
+  generation: booleanString().default(true),
+  withPreview: booleanString().default(false),
+});
 export type GetGenerationDataInput = z.input<typeof getGenerationDataSchema>;
 export type GetGenerationDataSchema = z.infer<typeof getGenerationDataSchema>;
 export const getGenerationDataSchema = z.discriminatedUnion('type', [
@@ -308,5 +311,5 @@ export const prepareModelSchema = z.object({
 
 export type GetResourceDataByIdsInput = z.infer<typeof getResourceDataByIdsSchema>;
 export const getResourceDataByIdsSchema = z.object({
-  ids: z.array(z.number()).min(1).max(20),
+  ids: z.array(z.number()).min(1).max(100),
 });

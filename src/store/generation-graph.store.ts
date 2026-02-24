@@ -117,28 +117,52 @@ function substituteResource(item: GenerationResource): GenerationResource {
   return rest;
 }
 
-/** Fetch generation data from the API with caching */
-const dictionary: Record<string, GenerationData> = {};
-export async function fetchGenerationData(input: GetGenerationDataInput): Promise<GenerationData> {
-  let key = 'default';
+/** Build a normalized cache key for a generation data request.
+ *
+ * `modelVersion` (single ID) and `modelVersions` ([single ID]) share the same
+ * key so parallel or sequential calls for the same model version are deduplicated.
+ * Multi-ID `modelVersions` requests use a sorted key to be order-independent.
+ */
+function buildGenerationDataKey(input: GetGenerationDataInput): string {
   switch (input.type) {
-    case 'modelVersions':
-      key = `${input.type}_${Array.isArray(input.ids) ? input.ids.join('_') : input.ids}`;
-      break;
     case 'modelVersion':
-      key = `${input.type}_${input.id}${input.epoch ? `_${input.epoch}` : ''}`;
-      break;
+      return `model_${input.id}${input.epoch ? `_e${input.epoch}` : ''}`;
+    case 'modelVersions': {
+      const ids = (Array.isArray(input.ids) ? input.ids : [input.ids])
+        .slice()
+        .sort((a, b) => a - b);
+      return `model_${ids.join('_')}`;
+    }
     default:
-      key = `media_${input.id}`;
-      break;
+      return `media_${input.id}`;
   }
+}
 
-  if (dictionary[key]) return dictionary[key];
-  const response = await fetch(`/api/generation/data?${QS.stringify(input)}`);
-  if (!response.ok) throw new Error(response.statusText);
-  const data: GenerationData = await response.json();
-  dictionary[key] = data;
-  return data;
+/**
+ * In-flight + resolved promise cache.
+ * Caching the Promise (not just the resolved value) deduplicates parallel
+ * calls with the same key — the second caller awaits the same in-flight request.
+ */
+const generationDataCache = new Map<string, Promise<GenerationData>>();
+
+export function fetchGenerationData(input: GetGenerationDataInput): Promise<GenerationData> {
+  const key = buildGenerationDataKey(input);
+
+  const cached = generationDataCache.get(key);
+  if (cached) return cached;
+
+  const promise = fetch(`/api/generation/data?${QS.stringify({ ...input, withPreview: true })}`)
+    .then((res) => {
+      if (!res.ok) throw new Error(res.statusText);
+      return res.json() as Promise<GenerationData>;
+    })
+    .catch((err) => {
+      generationDataCache.delete(key); // Allow retry on failure
+      throw err;
+    });
+
+  generationDataCache.set(key, promise);
+  return promise;
 }
 
 // =============================================================================

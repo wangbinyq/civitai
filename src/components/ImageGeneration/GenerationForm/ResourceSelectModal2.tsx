@@ -852,11 +852,12 @@ function ResourceSelectCard({
         });
         return;
       }
+      const previewImage = resource.image ?? image;
       if (selectSource !== 'generation') {
-        onSelect({ ...resource, image });
+        onSelect({ ...resource, image: previewImage });
       } else {
         if (resource?.canGenerate || resource?.substitute?.canGenerate)
-          onSelect({ ...resource, image });
+          onSelect({ ...resource, image: previewImage });
         else
           showErrorNotification({
             error: new Error('This model is no longer available for generation'),
