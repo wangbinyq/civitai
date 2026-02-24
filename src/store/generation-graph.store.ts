@@ -11,7 +11,6 @@ import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { GetGenerationDataInput } from '~/server/schema/generation.schema';
 import type { GenerationData } from '~/server/services/generation/generation.service';
-import type { ResourceData } from '~/shared/data-graph/generation/common';
 import {
   getOutputTypeForWorkflow,
   isNewFormOnly,
@@ -38,8 +37,8 @@ export type RunType = 'run' | 'remix' | 'replay' | 'patch';
 export interface GenerationGraphData {
   /** Params from step.metadata.params or fetched generation data */
   params: Record<string, unknown>;
-  /** Resources in ResourceData format (matching data-graph resourceSchema) */
-  resources: ResourceData[];
+  /** Resources in full GenerationResource format */
+  resources: GenerationResource[];
   /** Type of run (determines reset behavior in form provider) */
   runType: RunType;
   /** Optional remix reference */
@@ -73,7 +72,7 @@ interface GenerationGraphState {
  * shows the right UI. Remove when legacy generator is removed.
  * See docs/legacy-generator-files.md
  */
-function syncLegacyFormStore(params: Record<string, unknown>, resources?: ResourceData[]) {
+function syncLegacyFormStore(params: Record<string, unknown>, resources?: GenerationResource[]) {
   const workflow = params.workflow as string | undefined;
   const ecosystem = params.ecosystem as string | undefined;
 
@@ -96,18 +95,6 @@ function syncLegacyFormStore(params: Record<string, unknown>, resources?: Resour
       }
     }
   }
-}
-
-/** Convert GenerationResource to ResourceData (matching data-graph resourceSchema) */
-function toResourceData(r: GenerationResource): ResourceData {
-  return {
-    id: r.id,
-    baseModel: r.baseModel,
-    model: { type: r.model.type },
-    strength: r.strength,
-    trainedWords: r.trainedWords.length > 0 ? r.trainedWords : undefined,
-    epochDetails: r.epochDetails ? { epochNumber: r.epochDetails.epochNumber } : undefined,
-  };
 }
 
 /** Apply resource substitutions (use substitute if original can't generate) */

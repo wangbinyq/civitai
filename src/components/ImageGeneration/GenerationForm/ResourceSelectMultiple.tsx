@@ -136,7 +136,7 @@ export const ResourceSelectMultiple = forwardRef<HTMLDivElement, ResourceSelectM
                       key={resource.id}
                       resource={resource}
                       selectSource={selectSource}
-                      onUpdate={handleUpdate}
+                      onUpdate={(value) => handleUpdate(value as GenerationResource)}
                       onRemove={handleRemove}
                     />
                   ))}

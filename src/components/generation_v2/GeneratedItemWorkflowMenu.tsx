@@ -31,7 +31,6 @@ import type {
   NormalizedGeneratedImage,
   NormalizedGeneratedImageStep,
 } from '~/server/services/orchestrator';
-import type { GenerationResource } from '~/shared/types/generation.types';
 import {
   useGeneratedItemWorkflows,
   applyWorkflowWithCheck,
@@ -66,8 +65,7 @@ export function GeneratedItemWorkflowMenu({
   const isMember = status.tier !== 'free';
 
   const outputType = image.type === 'video' ? 'video' : 'image';
-  const ecosystemKey: string | undefined =
-    (step.params as any).ecosystem ?? step.params.baseModel;
+  const ecosystemKey: string | undefined = (step.params as any).ecosystem ?? step.params.baseModel;
 
   const { groups, isCompatible } = useGeneratedItemWorkflows({
     outputType,
@@ -86,7 +84,7 @@ export function GeneratedItemWorkflowMenu({
     // Legacy form sync (type/engine) is handled by generationGraphStore.setData
     generationGraphStore.setData({
       params: { ...step.metadata.params, seed: seed ?? null },
-      resources: step.resources as GenerationResource[],
+      resources: step.resources,
       runType: 'remix',
       remixOfId: step.metadata?.remixOfId,
     });

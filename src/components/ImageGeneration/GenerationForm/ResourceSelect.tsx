@@ -100,7 +100,7 @@ export const ResourceSelect = forwardRef<HTMLDivElement, Props>(
           <ResourceSelectCard
             resource={value}
             selectSource={selectSource}
-            onUpdate={handleChange}
+            onUpdate={(value) => handleChange(value as GenerationResource)}
             onRemove={allowRemove ? handleRemove : undefined}
             onSwap={handleOpenResourceSearch}
             hideVersion={hideVersion}

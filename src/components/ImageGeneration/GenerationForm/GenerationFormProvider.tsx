@@ -360,9 +360,7 @@ export function GenerationFormProvider({
     const workflowKey = graphParams.workflow as string | undefined;
     const ecosystemKey = graphParams.ecosystem as string | undefined;
     const ecosystemId = ecosystemKey ? ecosystemByKey.get(ecosystemKey)?.id : undefined;
-    const checkpointModelId = (graphResources as { id: number; model: { type: string } }[]).find(
-      (r) => r.model.type === 'Checkpoint'
-    )?.id;
+    const checkpointModelId = graphResources.find((r) => r.model.type === 'Checkpoint')?.id;
 
     if (workflowKey && isNewFormOnly(workflowKey, ecosystemId, checkpointModelId)) {
       prevCounterRef.current = storeCounter;
@@ -383,7 +381,7 @@ export function GenerationFormProvider({
     // Legacy form store type sync is handled centrally by syncLegacyFormStore
     // in generation-graph.store.ts (called from setData/open)
 
-    const resources = graphResources as GenerationResource[];
+    const resources = graphResources;
 
     // Convert graph params to legacy format
     const legacyParams = mapGraphToLegacyParams(graphParams);

@@ -31,7 +31,6 @@ import type {
   NormalizedGeneratedImage,
   NormalizedGeneratedImageStep,
 } from '~/server/services/orchestrator';
-import type { GenerationResource } from '~/shared/types/generation.types';
 import { sourceMetadataStore, type SourceMetadata } from '~/store/source-metadata.store';
 import { useLegacyGeneratorStore } from '~/store/legacy-generator.store';
 import { UpscaleImageModal } from '~/components/Orchestrator/components/UpscaleImageModal';
@@ -226,7 +225,7 @@ function applyWorkflowToForm({
       ...(inputType === 'video' ? { video: image.url } : {}),
       ...(ecosystem ? { ecosystem } : {}),
     },
-    resources: clearResources ? [] : (step.resources as GenerationResource[]),
+    resources: clearResources ? [] : step.resources,
     runType: 'patch',
   });
 }
