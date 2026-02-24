@@ -24,7 +24,7 @@ export type ImportStatus = "Pending" | "Processing" | "Failed" | "Completed";
 
 export type ModelStatus = "Draft" | "Training" | "Published" | "Scheduled" | "Unpublished" | "UnpublishedViolation" | "GatherInterest" | "Deleted";
 
-export type TrainingStatus = "Pending" | "Submitted" | "Paused" | "Denied" | "Processing" | "InReview" | "Failed" | "Approved";
+export type TrainingStatus = "Pending" | "Submitted" | "Paused" | "Denied" | "Processing" | "InReview" | "Failed" | "Approved" | "Expired";
 
 export type CommercialUse = "None" | "Image" | "RentCivit" | "Rent" | "Sell";
 

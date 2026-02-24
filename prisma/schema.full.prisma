@@ -605,6 +605,8 @@ enum TrainingStatus {
   Failed
   /// published
   Approved
+  /// moderation review expired before completion
+  Expired
 }
 
 enum CommercialUse {
