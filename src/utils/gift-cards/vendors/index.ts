@@ -4,6 +4,7 @@ import { buybuzzVendor } from './buybuzz';
 import { waifuWayVendor } from './waifu-way';
 import { lewtDropVendor } from './lewt-drop';
 import { royalCdKeysVendor } from './royal-cd-keys';
+import { cryptoVendor } from './crypto';
 
 const vendorRegistry: VendorRegistry = {
   kinguin: kinguinVendor,
@@ -11,6 +12,7 @@ const vendorRegistry: VendorRegistry = {
   'waifu-way': waifuWayVendor,
   'lewt-drop': lewtDropVendor,
   'royal-cd-keys': royalCdKeysVendor,
+  crypto: cryptoVendor,
 };
 
 export function getEnabledVendors(): Vendor[] {
