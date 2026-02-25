@@ -34,6 +34,7 @@ import { useGenerationGraphStore } from '~/store/generation-graph.store';
 import { useDebouncer } from '~/utils/debouncer';
 import { usePromptFocusedStore } from '~/components/Generate/Input/InputPrompt';
 import { mapDataToGraphInput } from '~/server/services/orchestrator/legacy-metadata-mapper';
+import { splitResourcesByType } from '~/shared/utils/resource.utils';
 
 const Context = createContext<UseTRPCQueryResult<
   GenerationWhatIfResponse | undefined,
@@ -107,10 +108,11 @@ export function TextToImageWhatIfProvider({ children }: { children: React.ReactN
         // Main model (checkpoint)
         removeEmpty({
           id: modelVersionId,
-          epochDetails: model?.epochDetails?.epochNumber != null
-            ? { epochNumber: model.epochDetails.epochNumber }
-            : undefined,
-          air: model?.air,
+          epochDetails:
+            model?.epochDetails?.epochNumber != null
+              ? { epochNumber: model.epochDetails.epochNumber }
+              : undefined,
+          air: isFlux && isFluxStandard && params.fluxMode ? params.fluxMode : model?.air,
           baseModel: params.baseModel,
           model: { type: model?.model?.type ?? 'Checkpoint' },
         }),
@@ -118,9 +120,10 @@ export function TextToImageWhatIfProvider({ children }: { children: React.ReactN
         ...(resources?.map((r) =>
           removeEmpty({
             id: r.id as number,
-            epochDetails: r.epochDetails?.epochNumber != null
-              ? { epochNumber: r.epochDetails.epochNumber }
-              : undefined,
+            epochDetails:
+              r.epochDetails?.epochNumber != null
+                ? { epochNumber: r.epochDetails.epochNumber }
+                : undefined,
             air: r.air,
             baseModel: r.baseModel ?? params.baseModel,
             model: { type: r.model?.type ?? 'LORA' },
@@ -131,9 +134,10 @@ export function TextToImageWhatIfProvider({ children }: { children: React.ReactN
           ? [
               removeEmpty({
                 id: vae.id,
-                epochDetails: vae.epochDetails?.epochNumber != null
-                  ? { epochNumber: vae.epochDetails.epochNumber }
-                  : undefined,
+                epochDetails:
+                  vae.epochDetails?.epochNumber != null
+                    ? { epochNumber: vae.epochDetails.epochNumber }
+                    : undefined,
                 air: vae.air,
                 baseModel: vae.baseModel ?? params.baseModel,
                 model: { type: 'VAE' as const },
@@ -144,13 +148,16 @@ export function TextToImageWhatIfProvider({ children }: { children: React.ReactN
 
       // Convert to graph input format using the mapper
       // Don't pass stepType - let resolveWorkflow infer it from params and ecosystem
-      const graphInput = mapDataToGraphInput(
-        removeEmpty(parsed),
-        enrichedResources as any
-      );
+      const graphInput = mapDataToGraphInput(removeEmpty(parsed), enrichedResources as any);
 
-      // Add resources to graph input (needed for whatIfFromGraph)
-      graphInput.resources = enrichedResources;
+      // Split resources by type so the graph gets model, resources, and vae
+      // as separate fields — matching how GenerationForm2 submit works.
+      // Without this, graphInput.model is never set and fluxMode always
+      // falls back to 'standard' because ctx.model?.id is undefined.
+      const split = splitResourcesByType(enrichedResources as any);
+      if (split.model) graphInput.model = split.model;
+      if (split.resources.length) graphInput.resources = split.resources;
+      if (split.vae) graphInput.vae = split.vae;
 
       setQuery(graphInput);
     });

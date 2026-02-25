@@ -741,20 +741,6 @@ export function GenerationForm() {
             )}
           />
 
-          {/* Generate audio toggle (video ecosystems) */}
-          <Controller
-            graph={graph}
-            name="generateAudio"
-            render={({ value, onChange }) => (
-              <Checkbox
-                label="Generate audio"
-                description="Generate audio along with the video"
-                checked={value}
-                onChange={(e) => onChange(e.currentTarget.checked)}
-              />
-            )}
-          />
-
           {/* Output Settings (image output only) */}
           <Controller
             graph={graph}
@@ -1062,6 +1048,20 @@ export function GenerationForm() {
                 <Checkbox
                   label="Enhance prompt"
                   description="Automatically improve your prompt for better results"
+                  checked={value}
+                  onChange={(e) => onChange(e.currentTarget.checked)}
+                />
+              )}
+            />
+
+            {/* Generate audio toggle (video ecosystems) */}
+            <Controller
+              graph={graph}
+              name="generateAudio"
+              render={({ value, onChange }) => (
+                <Checkbox
+                  label="Generate audio"
+                  description="Generate audio along with the video"
                   checked={value}
                   onChange={(e) => onChange(e.currentTarget.checked)}
                 />

@@ -185,7 +185,7 @@ function GenerationTabsContent({ fullScreen }: { fullScreen?: boolean }) {
         </div>
         {view !== 'generate' && !isGeneratePage && <GeneratedImageActions />}
       </div>
-      {view === 'generate' && <GeneratorToggleBanner />}
+      <GeneratorToggleBanner />
       <View />
     </>
   );

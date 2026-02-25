@@ -337,8 +337,10 @@ function SubmitButton2({
               ({ image, ...resource }) => resource
             ) as any;
 
-          if (!promptFocused && result.prompt !== undefined) {
-            promptRef.current = result.prompt!;
+          // Read prompt from form data directly — result.prompt is always empty
+          // since prompt is excluded from whatIfData via WHATIF_EXCLUDE_KEYS
+          if (!promptFocused) {
+            promptRef.current = formData.prompt ?? '';
           }
 
           // Transform via metadataFn (applies transformFn which sets correct baseModel/ecosystem)

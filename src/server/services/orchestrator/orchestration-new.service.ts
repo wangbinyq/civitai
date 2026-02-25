@@ -743,7 +743,11 @@ export async function whatIfFromGraph({
   token,
   currencies,
 }: WhatIfOptions) {
-  const data = validateInput(normalizeInput(input), externalCtx);
+  // Provide fallback for fields that don't affect cost estimation.
+  // The client excludes prompt/negativePrompt from whatIf queries for optimization,
+  // so we default them to pass validation when not provided.
+  const whatIfInput = { prompt: 'cost-estimation', negativePrompt: '', ...input };
+  const data = validateInput(whatIfInput, externalCtx);
   const step = await createWorkflowStepFromGraph({
     data,
     isWhatIf: true,

@@ -102,7 +102,7 @@ export const createFluxInput = defineHandler<FluxCtx, TextToImageStepTemplate>((
   }
 
   // Get scheduler (Flux uses Euler by default)
-  const scheduler = samplersToSchedulers['Euler'] as Scheduler;
+  const scheduler = samplersToSchedulers['undefined'] as Scheduler;
 
   return {
     $type: 'textToImage',

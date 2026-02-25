@@ -198,18 +198,18 @@ export const veo3Graph = new DataGraph<Veo3Ctx, GenerationCtx>()
     meta: {
       options: veo3ApiVersionOptions,
     },
-  })
+  });
 
-  // Resources node (LoRAs)
-  .node(
-    'resources',
-    (ctx, ext) =>
-      resourcesNode({
-        ecosystem: ctx.ecosystem,
-        limit: ext.limits.maxResources,
-      }),
-    ['ecosystem']
-  );
+// Resources node (LoRAs)
+// .node(
+//   'resources',
+//   (ctx, ext) =>
+//     resourcesNode({
+//       ecosystem: ctx.ecosystem,
+//       limit: ext.limits.maxResources,
+//     }),
+//   ['ecosystem']
+// );
 
 // Export constants for use in components
 export {
