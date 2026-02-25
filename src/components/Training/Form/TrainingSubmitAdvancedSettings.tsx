@@ -682,7 +682,8 @@ export const AdvancedSettings = ({
                     value: inp,
                     visible: !(
                       ts.name === 'engine' ||
-                      (ts.name === 'trainBatchSize' && selectedRun.params.engine === 'ai-toolkit')
+                      (ts.name === 'trainBatchSize' && selectedRun.params.engine === 'ai-toolkit') ||
+                      (ts.name === 'optimizerArgs' && selectedRun.params.engine === 'ai-toolkit')
                     ),
                   };
                 })}
