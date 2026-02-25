@@ -9,7 +9,7 @@
 import { Alert, Button, Card, Notification, NumberInput, Text } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconAlertTriangle, IconCheck, IconX } from '@tabler/icons-react';
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { AlertWithIcon } from '~/components/AlertWithIcon/AlertWithIcon';
 import {
@@ -166,8 +166,25 @@ function SubmitButton({ isLoading: isSubmitting, onSubmit }: SubmitButtonProps) 
   const { creatorTip, civitaiTip } = useTipStore();
 
   // Get whatIf data from context (provided by WhatIfProvider)
-  // isLoading includes both pending debounce AND fetching states
-  const { data, isError, isLoading: isWhatIfLoading, canEstimateCost } = useWhatIfContext();
+  // isLoading includes both prompt-dirty AND fetching states
+  const {
+    data,
+    isError,
+    isLoading: isWhatIfLoading,
+    isPromptDirty,
+    canEstimateCost,
+  } = useWhatIfContext();
+
+  // Pending submit: when the user clicks the loading button while prompt is dirty,
+  // we queue the submit and auto-fire it once the whatIf resolves with fresh pricing.
+  const pendingSubmitRef = useRef(false);
+
+  useEffect(() => {
+    if (pendingSubmitRef.current && !isWhatIfLoading && !isSubmitting) {
+      pendingSubmitRef.current = false;
+      onSubmit?.();
+    }
+  }, [isWhatIfLoading, isSubmitting, onSubmit]);
 
   // Get values from graph for tip calculation
   const snapshot = graph.getSnapshot() as ResourceSnapshot & { workflow?: string };
@@ -186,6 +203,10 @@ function SubmitButton({ isLoading: isSubmitting, onSubmit }: SubmitButtonProps) 
     onSubmit?.();
   };
 
+  // Allow clicking the loading button when prompt is dirty to queue a pending submit.
+  // Clicking the overlay also blurs the prompt, which triggers the whatIf refresh.
+  const showPendingOverlay = isPromptDirty && !isSubmitting && !isError && canEstimateCost;
+
   const generateButton = (
     <GenerateButton
       type="button"
@@ -200,11 +221,33 @@ function SubmitButton({ isLoading: isSubmitting, onSubmit }: SubmitButtonProps) 
     />
   );
 
-  if (!features.creatorComp) return generateButton;
+  // Overlay to capture clicks on the loading button when prompt is dirty.
+  const pendingOverlay = showPendingOverlay ? (
+    <div
+      className="absolute inset-0 z-10 cursor-pointer"
+      onClick={() => {
+        pendingSubmitRef.current = true;
+      }}
+    />
+  ) : null;
+
+  if (!features.creatorComp) {
+    // When there's no overlay needed, return the button directly (no wrapper)
+    if (!pendingOverlay) return generateButton;
+
+    // Wrapper mirrors the button's flex-1 + h-full so layout is unchanged
+    return (
+      <div className="relative flex h-full flex-1">
+        {generateButton}
+        {pendingOverlay}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-1 items-center gap-1 rounded-md bg-gray-2 p-1 pr-1.5 dark:bg-dark-5">
+    <div className="relative flex flex-1 items-center gap-1 rounded-md bg-gray-2 p-1 pr-1.5 dark:bg-dark-5">
       {generateButton}
+      {pendingOverlay}
       <GenerationCostPopover
         width={300}
         workflowCost={data?.cost ?? {}}

@@ -22,6 +22,7 @@ import {
   schedulerNode,
   seedNode,
   sliderNode,
+  negativePromptNode,
 } from './common';
 
 // =============================================================================
@@ -90,14 +91,8 @@ const turboModeGraph = new DataGraph<ZImageModeCtx, GenerationCtx>()
     ['ecosystem']
   )
   .node('aspectRatio', aspectRatioNode({ options: zImageAspectRatios, defaultValue: '1:1' }))
-  .node(
-    'cfgScale',
-    sliderNode({ min: 1, max: 2, step: 0.1, defaultValue: 1 })
-  )
-  .node(
-    'steps',
-    sliderNode({ min: 1, max: 15, defaultValue: 9 })
-  )
+  .node('cfgScale', sliderNode({ min: 1, max: 2, step: 0.1, defaultValue: 1 }))
+  .node('steps', sliderNode({ min: 1, max: 15, defaultValue: 9 }))
   .node('seed', seedNode());
 
 /**
@@ -114,17 +109,12 @@ const baseModeGraph = new DataGraph<ZImageModeCtx, GenerationCtx>()
       }),
     ['ecosystem']
   )
+  .node('negativePrompt', negativePromptNode())
   .node('aspectRatio', aspectRatioNode({ options: zImageAspectRatios, defaultValue: '1:1' }))
   .node('sampler', samplerNode({ options: zImageSamplers, defaultValue: 'euler' }))
   .node('scheduler', schedulerNode({ options: zImageSchedules, defaultValue: 'simple' }))
-  .node(
-    'cfgScale',
-    sliderNode({ min: 1, max: 10, step: 0.5, defaultValue: 4 })
-  )
-  .node(
-    'steps',
-    sliderNode({ min: 1, max: 50, defaultValue: 20 })
-  )
+  .node('cfgScale', sliderNode({ min: 1, max: 10, step: 0.5, defaultValue: 4 }))
+  .node('steps', sliderNode({ min: 1, max: 50, defaultValue: 20 }))
   .node('seed', seedNode());
 
 // =============================================================================

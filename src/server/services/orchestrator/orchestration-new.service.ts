@@ -50,6 +50,7 @@ import { WORKFLOW_TAGS } from '~/shared/constants/generation.constants';
 import { includesPoi } from '~/utils/metadata/audit';
 import { ecosystemByKey } from '~/shared/constants/basemodel.constants';
 import { toStepMetadata } from '~/shared/utils/resource.utils';
+import { maxRandomSeed } from '~/server/common/constants';
 import { auditPromptServer } from '~/server/services/orchestrator/promptAuditing';
 
 // Ecosystem handlers - unified router
@@ -570,7 +571,19 @@ export async function createWorkflowStepFromGraph({
   const airs = new StrictAirMap(enrichedResources.map((r) => [r.id, r.air]));
   const handlerCtx: GenerationHandlerCtx = { airs };
 
-  const { $type, input, metadata: additionalMetadata } = await createStepInput(data, handlerCtx);
+  // Resolve seed before creating step input and metadata so both use the same value.
+  // Ecosystem handlers also do `data.seed ?? random`, but since we set it here first,
+  // they'll use this value and everything stays in sync.
+  const resolvedData =
+    !('seed' in data) || data.seed == null
+      ? { ...data, seed: Math.floor(Math.random() * maxRandomSeed) }
+      : data;
+
+  const {
+    $type,
+    input,
+    metadata: additionalMetadata,
+  } = await createStepInput(resolvedData, handlerCtx);
 
   // Calculate timeout: base 20 minutes + 1 minute per additional resource
   const timeSpan = new TimeSpan(0, 20, 0);
@@ -580,7 +593,7 @@ export async function createWorkflowStepFromGraph({
   // Convert graph output to legacy {resources, params} format for storage
   // This allows the legacy-metadata-mapper to read historical data consistently
   const stepMetadata = toStepMetadata(
-    data as Record<string, unknown> & {
+    resolvedData as Record<string, unknown> & {
       model?: { id: number; model: { type: string } };
       resources?: { id: number; model: { type: string } }[];
       vae?: { id: number; model: { type: string } };
@@ -609,8 +622,15 @@ export async function createWorkflowStepFromGraph({
   // Check if this is an enhancement workflow with source metadata
   const isEnhancement = workflowConfigByKey.get(data.workflow)?.enhancement === true;
 
-  let imageMetadata: string | undefined = (input as Record<string, unknown>)
-    .imageMetadata as string;
+  let imageMetadata = !isWhatIf
+    ? JSON.stringify(
+        removeEmpty({
+          ...stepMetadata.params,
+          resources: resourcesToImageMetadataResources(stepMetadata.resources),
+        })
+      )
+    : undefined;
+
   // For enhancement workflows with source metadata, restructure metadata to preserve original generation
   if (!isWhatIf && isEnhancement && sourceMetadata) {
     // Use original params/resources as the root-level metadata
@@ -1038,9 +1058,9 @@ export function formatStepOutputs(
   step: StepWithOutput
 ): { images: NormalizedWorkflowStepOutput[]; errors: string[] } {
   const items = normalizeStepOutput(step);
-  const seed = 'seed' in (step.input ?? {}) ? (step.input as { seed?: number }).seed : undefined;
   const metadata = (step.metadata as Record<string, unknown>) ?? {};
   const params = (metadata.params ?? {}) as Record<string, unknown>;
+  const seed = params.seed as number | undefined;
   const transformations = (metadata.transformations ?? []) as Array<{
     params?: Record<string, unknown>;
   }>;

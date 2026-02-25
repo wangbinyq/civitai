@@ -114,8 +114,8 @@ class LocalStorageAdapter<Ctx extends Record<string, unknown>> implements Storag
     this.initializedGraphs.add(this.graph.createdAt);
   }
 
-  onSet(_values: Partial<Ctx>, _ctx: Ctx): void {
-    this.save();
+  onSet(values: Partial<Ctx>, _ctx: Ctx): void {
+    this.save(values as Record<string, unknown>);
   }
 
   getValues(): Partial<Ctx> {
@@ -185,7 +185,7 @@ class LocalStorageAdapter<Ctx extends Record<string, unknown>> implements Storag
     this.markInitialized();
   }
 
-  save(): void {
+  save(inputValues?: Record<string, unknown>): void {
     const ctx = this.graph.ctx;
     const activeKeys = new Set(Object.keys(ctx));
 
@@ -209,6 +209,9 @@ class LocalStorageAdapter<Ctx extends Record<string, unknown>> implements Storag
 
     // Track keys claimed by unconditional groups (prevents duplicate saves)
     const unconditionalClaimedKeys = new Set<string>();
+    // Track inactive input keys that have been persisted (prevents duplicate writes across groups)
+    const savedInactiveKeys = new Set<string>();
+    const explicitKeys = this.getExplicitKeys();
 
     for (const group of this.options.groups) {
       if (group.condition && !group.condition(ctx)) continue;
@@ -256,8 +259,6 @@ class LocalStorageAdapter<Ctx extends Record<string, unknown>> implements Storag
       // For wildcard groups, remove any keys that are explicitly defined in named groups
       // This cleans up stale data when keys are moved to explicit groups
       if (group.keys === '*') {
-        // Get all explicitly listed keys to remove from wildcard group storage
-        const explicitKeys = this.getExplicitKeys();
         for (const key of explicitKeys) {
           delete values[key];
         }
@@ -266,6 +267,22 @@ class LocalStorageAdapter<Ctx extends Record<string, unknown>> implements Storag
       // Overwrite with current context values
       for (const key of keysToSave) {
         values[key] = ctx[key as keyof Ctx];
+      }
+
+      // Persist input values for nodes that aren't currently active (e.g., when: false).
+      // This ensures set() values survive for hidden nodes and are available via the
+      // valueProvider when the node becomes visible again. The node's input schema
+      // handles validation/coercion when the value is later read back.
+      if (inputValues) {
+        for (const key of Object.keys(inputValues)) {
+          if (activeKeys.has(key) || savedInactiveKeys.has(key)) continue;
+          const belongsToGroup =
+            group.keys === '*' ? !explicitKeys.has(key) : group.keys.includes(key);
+          if (belongsToGroup) {
+            values[key] = inputValues[key];
+            savedInactiveKeys.add(key);
+          }
+        }
       }
 
       // Only save if we have values to save

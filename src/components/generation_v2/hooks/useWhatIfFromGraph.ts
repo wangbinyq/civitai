@@ -7,6 +7,11 @@
  * - When prompt is focused, we use the last committed prompt value
  * - When prompt loses focus, we update to the current value
  * - This prevents blur from triggering a new whatIf request that interferes with submit
+ *
+ * Exposes `isPromptDirty` so consumers can detect when pricing is stale due to
+ * prompt edits. The submit button uses this to show loading immediately when the
+ * user starts editing (rather than only on blur) and to queue a pending submit
+ * that auto-fires once the whatIf resolves.
  */
 
 import { isEqual, omit } from 'lodash-es';
@@ -143,9 +148,16 @@ export function useWhatIfFromGraph({ enabled = true }: UseWhatIfFromGraphOptions
   const validationErrors =
     validationResult && !validationResult.success ? validationResult.errors : null;
 
+  // True when the current prompt differs from the value used in the active whatIf query.
+  // Used by the submit button to show a clickable overlay that queues a pending submit,
+  // so clicking generate while prompt is dirty auto-fires once the whatIf resolves.
+  const isPromptDirty =
+    snapshot?.prompt !== undefined && (snapshot.prompt as string) !== promptRef.current;
+
   return {
     ...queryResult,
     isLoading: queryResult.isFetching,
+    isPromptDirty,
     canEstimateCost,
     validationErrors,
   };

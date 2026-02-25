@@ -1345,6 +1345,13 @@ export class DataGraph<
     for (const key of exclude) {
       if (key in this._ctx) {
         preservedValues[key] = (this._ctx as Record<string, unknown>)[key];
+      } else if (this.valueProvider) {
+        // For excluded keys not in ctx (inactive nodes, e.g. when: false),
+        // read from the valueProvider (backed by storage) so they survive the reset
+        const stored = this.valueProvider(key, this._ctx);
+        if (stored !== undefined) {
+          preservedValues[key] = stored;
+        }
       }
     }
 

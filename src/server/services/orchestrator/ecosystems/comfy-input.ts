@@ -82,5 +82,11 @@ export async function createComfyInput(
 }
 
 export function resourcesToImageMetadataResources(resources?: Record<string, unknown>[]) {
-  return resources?.map((r) => ({ modelVersionId: r.id, strength: r.strength }));
+  return resources?.map((r) =>
+    removeEmpty({
+      modelVersionId: r.id,
+      strength: r.strength,
+      type: (r.model as Record<string, unknown>)?.type ?? r.type,
+    })
+  );
 }

@@ -124,7 +124,7 @@ export const createWanInput = defineHandler<WanCtx, WanInput>((data, ctx) => {
         negativePrompt: 'negativePrompt' in data ? data.negativePrompt : undefined,
         resolution: 'resolution' in data ? data.resolution : undefined,
         aspectRatio: (hasImages
-          ? getImageAspectRatio(data.images, v22AspectRatios)
+          ? getImageAspectRatio(data.images, v225bAspectRatios)
           : data.aspectRatio?.value) as Wan22FalTextToVideoInput['aspectRatio'],
         enablePromptExpansion: false,
         shift: 'shift' in data ? data.shift : undefined,

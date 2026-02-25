@@ -21,7 +21,7 @@ import { imagesNode } from './common';
 const MAX_OUTPUT_RESOLUTION = 4096;
 
 /** Available upscale multipliers (applied to source dimensions) */
-const UPSCALE_MULTIPLIERS = [2, 3, 4] as const;
+const UPSCALE_MULTIPLIERS = [1.5, 2, 2.5, 3] as const;
 
 /** Available target resolution presets (longest side in pixels) */
 const UPSCALE_RESOLUTIONS = [
