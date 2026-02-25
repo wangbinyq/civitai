@@ -95,6 +95,7 @@ export function SeedInput({ value, onChange, disabled, ...inputWrapperProps }: S
           hideControls
           disabled={disabled}
           className="flex-1"
+          __clearable
         />
       </Group>
     </Input.Wrapper>

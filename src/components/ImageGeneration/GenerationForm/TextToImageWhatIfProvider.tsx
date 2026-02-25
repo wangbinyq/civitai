@@ -98,7 +98,7 @@ export function TextToImageWhatIfProvider({ children }: { children: React.ReactN
       const parsed = textToImageParamsSchema.parse({
         ...params,
         ...whatIfQueryOverrides,
-        prompt: promptRef.current,
+        prompt: promptRef.current || 'cost estimation',
       });
 
       // Build enriched resources with all needed fields:

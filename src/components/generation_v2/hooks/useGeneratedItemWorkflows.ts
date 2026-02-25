@@ -400,7 +400,7 @@ export async function applyWorkflowWithCheck({
         ...(inputType === 'video' ? { video: image.url } : {}),
       },
       resources: step.resources,
-      runType: 'remix',
+      runType: 'replay',
     });
     return;
   }
