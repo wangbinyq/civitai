@@ -2,6 +2,7 @@ import { mergeWith } from 'lodash-es';
 import * as z from 'zod';
 import { dbRead } from '~/server/db/client';
 import { NsfwLevel } from '~/server/common/enums';
+import { parseChallengeMetadata } from '~/server/schema/challenge.schema';
 import { Flags } from '~/shared/utils/flags';
 
 import { getDbWithoutLag } from '~/server/db/db-lag-helpers';
@@ -433,14 +434,14 @@ export type DailyChallengeDetails = {
  * This adapter enables backward compatibility during the transition period.
  */
 export function challengeToLegacyFormat(challenge: ChallengeDetails): DailyChallengeDetails {
-  const metadata = challenge.metadata as Record<string, unknown> | null;
+  const metadata = parseChallengeMetadata(challenge.metadata);
   return {
     challengeId: challenge.id,
-    articleId: (metadata?.articleId as number) ?? 0,
-    type: (metadata?.challengeType as string) ?? 'world-morph',
+    articleId: metadata.articleId ?? 0,
+    type: metadata.challengeType ?? 'world-morph',
     date: challenge.startsAt,
     theme: challenge.theme ?? '',
-    modelId: (metadata?.resourceModelId as number) ?? (metadata?.resourceUserId as number) ?? 0,
+    modelId: metadata.resourceModelId ?? metadata.resourceUserId ?? 0,
     modelVersionIds: challenge.modelVersionIds,
     collectionId: challenge.collectionId!,
     title: challenge.title,
