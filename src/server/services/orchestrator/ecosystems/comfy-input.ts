@@ -61,7 +61,10 @@ export async function createComfyInput(
       air: handlerCtx.airs.getOrThrow(resource.id),
       strength: resource.strength,
     }));
-    workflowData = { ...workflowData, resources: resourcesToApply };
+    workflowData = {
+      ...workflowData,
+      resources: resourcesToImageMetadataResources(resources),
+    };
     applyResources(comfyWorkflow, resourcesToApply);
   }
 
@@ -76,4 +79,8 @@ export async function createComfyInput(
       useSpineComfy: null,
     },
   };
+}
+
+export function resourcesToImageMetadataResources(resources?: Record<string, unknown>[]) {
+  return resources?.map((r) => ({ modelVersionId: r.id, strength: r.strength }));
 }

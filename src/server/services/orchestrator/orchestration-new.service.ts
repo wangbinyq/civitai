@@ -54,7 +54,7 @@ import { auditPromptServer } from '~/server/services/orchestrator/promptAuditing
 
 // Ecosystem handlers - unified router
 import { createEcosystemStepInput } from './ecosystems';
-import { createComfyInput } from './ecosystems/comfy-input';
+import { createComfyInput, resourcesToImageMetadataResources } from './ecosystems/comfy-input';
 import { removeEmpty } from '~/utils/object-helpers';
 
 // =============================================================================
@@ -631,7 +631,7 @@ export async function createWorkflowStepFromGraph({
     imageMetadata = JSON.stringify(
       removeEmpty({
         ...sourceMetadata.params,
-        resources: sourceMetadata.resources,
+        resources: resourcesToImageMetadataResources(sourceMetadata.resources),
       })
     );
   }
