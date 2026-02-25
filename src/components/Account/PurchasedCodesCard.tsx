@@ -32,6 +32,7 @@ type PurchasedCode = {
   expiresAt: Date | null;
   redeemedAt: Date | null;
   priceId: string | null;
+  price: { product: { metadata: unknown } } | null;
 };
 
 function PurchasedCodeRow({
@@ -56,10 +57,15 @@ function PurchasedCodeRow({
     },
   });
 
+  const tier =
+    item.type === 'Membership' && item.price?.product?.metadata
+      ? (item.price.product.metadata as { tier?: string })?.tier
+      : undefined;
+
   const description =
     item.type === 'Buzz'
       ? `${item.unitValue.toLocaleString()} Buzz`
-      : `${item.unitValue}-month Membership`;
+      : `${item.unitValue}-mo ${tier ? tier.charAt(0).toUpperCase() + tier.slice(1) + ' ' : ''}Membership`;
 
   return (
     <Group justify="space-between" wrap="nowrap" gap="xs" py={4}>
@@ -136,7 +142,7 @@ export function PurchasedCodesCard() {
       <Stack gap={0}>
         <Title order={2}>Purchased Codes</Title>
         <Text c="dimmed" size="sm">
-          Codes you purchased with crypto. Redeem or share them as gifts.
+          Codes associated with your account. Redeem or share them as gifts.
         </Text>
       </Stack>
       <Box mt="md" style={{ position: 'relative', minHeight: 40 }}>

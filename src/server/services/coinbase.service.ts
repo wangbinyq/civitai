@@ -197,7 +197,7 @@ export const processCodeOrder = async (eventData: Coinbase.WebhookEventSchema['e
 
     // Idempotency: check if this order was already processed
     const existing = await dbRead.redeemableCode.findFirst({
-      where: { transactionId: internalOrderId },
+      where: { metadata: { path: ['orderId'], equals: internalOrderId } },
       select: { code: true },
     });
 
@@ -250,7 +250,7 @@ export const processCodeOrder = async (eventData: Coinbase.WebhookEventSchema['e
           type,
           userId,
           priceId: codePriceId,
-          transactionId: internalOrderId,
+          metadata: { orderId: internalOrderId },
         },
       });
 

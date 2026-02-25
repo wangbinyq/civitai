@@ -2,6 +2,7 @@ import {
   consumeRedeemableCodeSchema,
   createRedeemableCodeSchema,
   deleteRedeemableCodeSchema,
+  getCodeByOrderIdSchema,
   upsertGiftNoticeSchema,
   deleteGiftNoticeSchema,
 } from '~/server/schema/redeemableCode.schema';
@@ -10,6 +11,7 @@ import {
   consumeRedeemableCode,
   createRedeemableCodes,
   deleteRedeemableCode,
+  getCodeByOrderId,
   getAllGiftNotices,
   getMyPurchasedCodes,
   upsertGiftNotice,
@@ -24,6 +26,9 @@ export const redeemableCodeRouter = router({
   getMyPurchasedCodes: protectedProcedure.query(({ ctx }) =>
     getMyPurchasedCodes({ userId: ctx.user.id })
   ),
+  getCodeByOrderId: protectedProcedure
+    .input(getCodeByOrderIdSchema)
+    .query(({ input, ctx }) => getCodeByOrderId({ ...input, userId: ctx.user.id })),
   create: moderatorProcedure.input(createRedeemableCodeSchema).mutation(async ({ input, ctx }) => {
     const codes = await createRedeemableCodes(input);
     await ctx.track.redeemableCode('create', { quantity: codes.length });

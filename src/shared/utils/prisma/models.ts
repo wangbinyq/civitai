@@ -2582,6 +2582,7 @@ export interface RedeemableCode {
   expiresAt: Date | null;
   redeemedAt: Date | null;
   transactionId: string | null;
+  metadata: JsonValue | null;
   priceId: string | null;
   price?: Price | null;
 }
