@@ -42,7 +42,7 @@ const featureFlags = createFeatureFlags({
   articleCreate: ['public'],
   adminTags: ['mod', 'granted'],
   civitaiLink: ['mod', 'member'],
-  stripe: ['mod'], 
+  stripe: ['mod'],
   imageTraining: { availability: ['user'], fliptKey: 'image-training' },
   videoTraining: { availability: ['public'], fliptKey: 'video-training' },
   aiToolkitSd15: { availability: ['mod'], fliptKey: 'ai-toolkit-sd15' },

@@ -209,12 +209,11 @@ const buildHubConnection = async ({ userId, token }: { token: string; userId: nu
           const logLevel = LogLevel[level] ?? 'unknown';
           workerLog(`signalr:${logLevel}`, message);
         },
-      }
+      },
     })
     .configureLogging(LogLevel.Trace)
     .withAutomaticReconnect([0, 2, 10, 18, 30, 45, 60, 90])
     .build();
-
 
   connection.onreconnected(() => {
     workerLog('connection:reconnected');

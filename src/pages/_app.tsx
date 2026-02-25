@@ -293,7 +293,11 @@ MyApp.getInitialProps = async (appContext: AppContext) => {
     return data;
   });
   // Pass this via the request so we can use it in SSR
-  const flags = await getFeatureFlagsAsync({ user: session?.user, host: request?.headers.host, req: request });
+  const flags = await getFeatureFlagsAsync({
+    user: session?.user,
+    host: request?.headers.host,
+    req: request,
+  });
 
   if (session) {
     (appContext.ctx.req as any)['session'] = session;

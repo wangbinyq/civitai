@@ -11,6 +11,7 @@ import {
   createRedeemableCodes,
   deleteRedeemableCode,
   getAllGiftNotices,
+  getMyPurchasedCodes,
   upsertGiftNotice,
   deleteGiftNotice,
 } from '~/server/services/redeemableCode.service';
@@ -20,6 +21,9 @@ import { REDIS_KEYS } from '~/server/redis/client';
 const redemptionCounter = cachedCounter(REDIS_KEYS.COUNTERS.REDEMPTION_ATTEMPTS);
 
 export const redeemableCodeRouter = router({
+  getMyPurchasedCodes: protectedProcedure.query(({ ctx }) =>
+    getMyPurchasedCodes({ userId: ctx.user.id })
+  ),
   create: moderatorProcedure.input(createRedeemableCodeSchema).mutation(async ({ input, ctx }) => {
     const codes = await createRedeemableCodes(input);
     await ctx.track.redeemableCode('create', { quantity: codes.length });
