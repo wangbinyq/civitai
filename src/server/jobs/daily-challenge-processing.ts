@@ -46,6 +46,7 @@ import {
   generateWinners,
 } from '~/server/games/daily-challenge/generative-content';
 import { logToAxiom } from '~/server/logging/client';
+import { parseChallengeMetadata } from '~/server/schema/challenge.schema';
 import { TransactionType } from '~/shared/constants/buzz.constants';
 import {
   createBuzzTransactionMany,
@@ -333,6 +334,7 @@ async function createChallengeFromSelection(
       challengeType: config.challengeType,
       resourceUserId,
       resourceModelId: resource.modelId,
+      themeElements: challengeContent.themeElements,
     },
   });
 
@@ -584,17 +586,21 @@ async function reviewEntriesForChallenge(currentChallenge: DailyChallengeDetails
           poolTrigger: PoolTrigger | null;
           maxPrizePool: number | null;
           prizeDistribution: number[] | null;
+          metadata: unknown;
         }
       | undefined
     ]
   >`
     SELECT "allowedNsfwLevel", "judgeId", "judgingPrompt",
-           "prizeMode", "basePrizePool", "buzzPerAction", "poolTrigger", "maxPrizePool", "prizeDistribution"
+           "prizeMode", "basePrizePool", "buzzPerAction", "poolTrigger", "maxPrizePool", "prizeDistribution",
+           "metadata"
     FROM "Challenge"
     WHERE id = ${currentChallenge.challengeId}
     LIMIT 1
   `;
   const allowedNsfwLevel = challengeRecord?.allowedNsfwLevel ?? 1;
+  const challengeMetadata = parseChallengeMetadata(challengeRecord?.metadata);
+  const themeElements = challengeMetadata.themeElements;
 
   // Get judging config from ChallengeJudge (or cached default judge if not assigned)
   const judgeId = challengeRecord?.judgeId ?? config.defaultJudgeId;
@@ -875,6 +881,7 @@ async function reviewEntriesForChallenge(currentChallenge: DailyChallengeDetails
       log('Reviewing entry:', entry);
       const review = await generateReview({
         theme: currentChallenge.theme,
+        themeElements,
         creator: entry.username,
         imageUrl: getEdgeUrl(entry.url, { width: 1200, name: 'image' }),
         config: judgingConfig,
@@ -1232,8 +1239,7 @@ export async function pickWinnersForChallenge(
       });
     }
     // Update Challenge status to Completed and store completion summary
-    const existingMetadata =
-      typeof winnerChallengeRecord.metadata === 'object' ? winnerChallengeRecord.metadata : {};
+    const existingMetadata = parseChallengeMetadata(winnerChallengeRecord.metadata);
     await dbWrite.challenge.update({
       where: { id: winnerChallengeRecord.id },
       data: {
