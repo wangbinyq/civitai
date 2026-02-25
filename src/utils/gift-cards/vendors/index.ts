@@ -3,6 +3,7 @@ import { kinguinVendor } from './kinguin';
 import { buybuzzVendor } from './buybuzz';
 import { waifuWayVendor } from './waifu-way';
 import { lewtDropVendor } from './lewt-drop';
+import { royalCdKeysVendor } from './royal-cd-keys';
 import { cryptoVendor } from './crypto';
 
 const vendorRegistry: VendorRegistry = {
@@ -10,6 +11,7 @@ const vendorRegistry: VendorRegistry = {
   buybuzz: buybuzzVendor,
   'waifu-way': waifuWayVendor,
   'lewt-drop': lewtDropVendor,
+  'royal-cd-keys': royalCdKeysVendor,
   crypto: cryptoVendor,
 };
 
