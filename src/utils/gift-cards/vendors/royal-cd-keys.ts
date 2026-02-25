@@ -25,11 +25,6 @@ export const royalCdKeysVendor: Vendor = {
         image: '/images/gift-cards/Bronze3.webp',
         durations: [
           {
-            months: 1,
-            url: 'https://royalcdkeys.com/products/civitai-com-1-month-bronze-membership-gift-card',
-            image: '/images/gift-cards/Bronze3.webp',
-          },
-          {
             months: 3,
             url: 'https://royalcdkeys.com/products/civitai-com-3-month-bronze-membership-gift-card-key',
             image: '/images/gift-cards/Bronze3.webp',
