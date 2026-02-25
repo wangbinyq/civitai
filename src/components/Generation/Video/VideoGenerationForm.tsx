@@ -51,7 +51,7 @@ import {
 } from '~/server/services/orchestrator/legacy-metadata-mapper';
 import { generationGraph, type GenerationCtx } from '~/shared/data-graph/generation';
 import { removeEmpty } from '~/utils/object-helpers';
-import { parseAIR } from '~/shared/utils/air';
+import { parseAIR, urnToModelType } from '~/shared/utils/air';
 
 /**
  * Keys excluded from whatIf queries — these don't affect cost estimation.
@@ -142,7 +142,7 @@ export function VideoGenerationForm({ engine }: { engine: OrchestratorEngine2 })
               const parsed = parseAIR(r.air);
               return removeEmpty({
                 id: r.id,
-                model: { type: parsed.type },
+                model: { type: urnToModelType(parsed.type) },
                 strength: r.strength,
               });
             })
@@ -356,13 +356,14 @@ function SubmitButton2({
                   const parsed = parseAIR(r.air);
                   return removeEmpty({
                     id: r.id,
-                    model: { type: parsed.type },
+                    model: { type: urnToModelType(parsed.type) },
                     strength: r.strength,
                   });
                 })
               : [];
 
           const { model, resources: splitResources } = splitResourcesByType(parsedResources);
+          console.log({ parsedResources, model, splitResources });
           graphInput.model = model;
           graphInput.resources = splitResources;
 

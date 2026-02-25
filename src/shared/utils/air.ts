@@ -58,6 +58,16 @@ const typeUrnMap: Partial<Record<ModelType, string>> = {
   [ModelType.Controlnet]: 'controlnet',
 };
 
+/** Reverse map: URN type string → ModelType enum value */
+const urnToModelTypeMap = new Map(
+  Object.entries(typeUrnMap).map(([modelType, urn]) => [urn, modelType as ModelType])
+);
+
+/** Convert a lowercase URN type (from AIR) to its PascalCase ModelType equivalent */
+export function urnToModelType(urnType: string): string {
+  return urnToModelTypeMap.get(urnType) ?? urnType;
+}
+
 export function stringifyAIR({
   baseModel,
   type,

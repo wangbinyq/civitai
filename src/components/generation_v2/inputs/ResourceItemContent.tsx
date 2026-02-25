@@ -191,21 +191,13 @@ export function ResourceItemContent({
       <Group gap="xs" justify="space-between" wrap="nowrap">
         {resource.image && (
           <div className="size-14 shrink-0 overflow-hidden rounded">
-            <ImageGuard2 image={resource.image} connectType="model" connectId={resource.model.id}>
-              {(safe) =>
-                !safe ? (
-                  <MediaHash {...resource.image} />
-                ) : (
-                  <EdgeMedia2
-                    src={resource.image!.url}
-                    type={resource.image!.type}
-                    metadata={null}
-                    width={450}
-                    className="size-full object-cover"
-                  />
-                )
-              }
-            </ImageGuard2>
+            <EdgeMedia2
+              src={resource.image!.url}
+              type={resource.image!.type}
+              metadata={null}
+              width={450}
+              className="size-full object-cover"
+            />
           </div>
         )}
         <div className="min-w-0 flex-1">

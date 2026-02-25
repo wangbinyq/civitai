@@ -33,19 +33,33 @@ const UPSCALE_RESOLUTIONS = [
 // Types
 // =============================================================================
 
-export interface UpscaleDimensionOption {
+/** Upscale selection — the user's chosen preset (multiplier or resolution target) */
+export type UpscaleSelection =
+  | { type: 'multiplier'; multiplier: number }
+  | { type: 'resolution'; resolution: number };
+
+export interface UpscaleMultiplierOption {
   label: string;
+  multiplier: number;
   width: number;
   height: number;
   disabled: boolean;
 }
 
-export interface TargetDimensionsMeta {
+export interface UpscaleResolutionOption {
+  label: string;
+  resolution: number;
+  width: number;
+  height: number;
+  disabled: boolean;
+}
+
+export interface UpscaleSelectionMeta {
   sourceWidth: number | undefined;
   sourceHeight: number | undefined;
   maxOutputResolution: number;
-  multiplierOptions: UpscaleDimensionOption[];
-  resolutionOptions: UpscaleDimensionOption[];
+  multiplierOptions: UpscaleMultiplierOption[];
+  resolutionOptions: UpscaleResolutionOption[];
   canUpscale: boolean;
 }
 
@@ -81,6 +95,31 @@ function computeUpscaleDimensions(
   };
 }
 
+/**
+ * Resolve an UpscaleSelection to a target longest-side value.
+ * - multiplier: source max dimension * multiplier
+ * - resolution: the preset resolution value directly
+ */
+function resolveSelectionTarget(
+  selection: UpscaleSelection,
+  sourceWidth: number,
+  sourceHeight: number
+): number {
+  if (selection.type === 'multiplier') {
+    return Math.max(sourceWidth, sourceHeight) * selection.multiplier;
+  }
+  return selection.resolution;
+}
+
+// =============================================================================
+// Schemas
+// =============================================================================
+
+const upscaleSelectionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('multiplier'), multiplier: z.number() }),
+  z.object({ type: z.literal('resolution'), resolution: z.number() }),
+]);
+
 // =============================================================================
 // Image Upscale Graph
 // =============================================================================
@@ -90,17 +129,18 @@ function computeUpscaleDimensions(
  *
  * Nodes:
  * - images: Source image (max 1)
- * - targetDimensions: Target output dimensions { width, height }
+ * - upscaleSelection: User's chosen preset (multiplier or resolution)
+ * - targetDimensions: Computed output dimensions from images + upscaleSelection
  *
  * The available upscale options (multipliers and resolution presets) are
- * exposed via the node meta so the UI can render preset buttons.
+ * exposed via the upscaleSelection node meta so the UI can render preset buttons.
  */
 export const imageUpscaleGraph = new DataGraph<Record<never, never>, GenerationCtx>()
   // Images node - upscale only allows 1 image
   .node('images', () => imagesNode(), [])
-  // Target dimensions - direct width/height input with preset options in meta
+  // Upscale selection - the user's chosen preset
   .node(
-    'targetDimensions',
+    'upscaleSelection',
     (ctx) => {
       const image = ctx.images?.[0];
       const sourceWidth = image?.width;
@@ -109,13 +149,14 @@ export const imageUpscaleGraph = new DataGraph<Record<never, never>, GenerationC
         sourceWidth && sourceHeight ? Math.max(sourceWidth, sourceHeight) : undefined;
 
       // Build multiplier options
-      const multiplierOptions: UpscaleDimensionOption[] =
+      const multiplierOptions: UpscaleMultiplierOption[] =
         sourceWidth && sourceHeight
           ? UPSCALE_MULTIPLIERS.map((multiplier) => {
               const target = Math.max(sourceWidth, sourceHeight) * multiplier;
               const dims = computeUpscaleDimensions(sourceWidth, sourceHeight, target);
               return {
                 label: `x${multiplier}`,
+                multiplier,
                 ...dims,
                 disabled: Math.max(dims.width, dims.height) > MAX_OUTPUT_RESOLUTION,
               };
@@ -123,12 +164,13 @@ export const imageUpscaleGraph = new DataGraph<Record<never, never>, GenerationC
           : [];
 
       // Build resolution options
-      const resolutionOptions: UpscaleDimensionOption[] =
+      const resolutionOptions: UpscaleResolutionOption[] =
         sourceWidth && sourceHeight
           ? UPSCALE_RESOLUTIONS.map(({ label, value: targetRes }) => {
               const dims = computeUpscaleDimensions(sourceWidth, sourceHeight, targetRes);
               return {
                 label,
+                resolution: targetRes,
                 ...dims,
                 disabled:
                   targetRes <= maxDimension! ||
@@ -137,23 +179,44 @@ export const imageUpscaleGraph = new DataGraph<Record<never, never>, GenerationC
             })
           : [];
 
-      // Default to x2 if possible
-      const defaultOption = multiplierOptions.find((o) => !o.disabled);
-      const defaultValue = defaultOption
-        ? { width: defaultOption.width, height: defaultOption.height }
+      // Default to first non-disabled multiplier
+      const defaultMultiplier = multiplierOptions.find((o) => !o.disabled);
+      const defaultValue: UpscaleSelection | undefined = defaultMultiplier
+        ? { type: 'multiplier', multiplier: defaultMultiplier.multiplier }
         : undefined;
 
       const canUpscale =
         multiplierOptions.some((o) => !o.disabled) || resolutionOptions.some((o) => !o.disabled);
 
       return {
-        input: z.object({ width: z.number().int(), height: z.number().int() }).optional(),
-        output: z
-          .object({ width: z.number().int(), height: z.number().int() })
-          .refine((val) => Math.max(val.width, val.height) <= MAX_OUTPUT_RESOLUTION, {
-            message: `Output dimensions must not exceed ${MAX_OUTPUT_RESOLUTION}px`,
-          }),
+        input: upscaleSelectionSchema.optional(),
+        output: upscaleSelectionSchema,
         defaultValue,
+        // When the source image changes, validate that the current selection is still valid.
+        // If the selection is now disabled, reset to the first available option.
+        transform: (
+          value: UpscaleSelection,
+          ctx: { images?: { width: number; height: number }[] }
+        ) => {
+          const img = ctx.images?.[0];
+          if (!img?.width || !img?.height) return value;
+
+          // Check if current selection produces valid dimensions
+          const target = resolveSelectionTarget(value, img.width, img.height);
+          const dims = computeUpscaleDimensions(img.width, img.height, target);
+          const isValid = Math.max(dims.width, dims.height) <= MAX_OUTPUT_RESOLUTION;
+
+          // For resolution selections, also check that the resolution exceeds the source
+          if (value.type === 'resolution') {
+            const maxDim = Math.max(img.width, img.height);
+            if (value.resolution <= maxDim || !isValid) {
+              return defaultValue ?? value;
+            }
+          }
+
+          if (!isValid) return defaultValue ?? value;
+          return value;
+        },
         meta: {
           sourceWidth,
           sourceHeight,
@@ -161,10 +224,24 @@ export const imageUpscaleGraph = new DataGraph<Record<never, never>, GenerationC
           multiplierOptions,
           resolutionOptions,
           canUpscale,
-        } satisfies TargetDimensionsMeta,
+        } satisfies UpscaleSelectionMeta,
       };
     },
     ['images']
+  )
+  // Computed target dimensions from images + upscaleSelection
+  .computed(
+    'targetDimensions',
+    (ctx) => {
+      const image = ctx.images?.[0];
+      if (!image?.width || !image?.height) return undefined;
+      const selection = ctx.upscaleSelection;
+      if (!selection) return undefined;
+
+      const target = resolveSelectionTarget(selection, image.width, image.height);
+      return computeUpscaleDimensions(image.width, image.height, target);
+    },
+    ['images', 'upscaleSelection']
   );
 
 /** Type helper for the image upscale graph context */

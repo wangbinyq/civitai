@@ -83,7 +83,7 @@ export function GeneratedItemWorkflowMenu({
     // Use step.resources (enriched) for splitResourcesByType to work correctly
     // Legacy form sync (type/engine) is handled by generationGraphStore.setData
     generationGraphStore.setData({
-      params: { ...step.metadata.params, seed: seed ?? null },
+      params: { ...step.metadata.params, seed: seed ?? undefined },
       resources: step.resources,
       runType: 'remix',
       remixOfId: step.metadata?.remixOfId,

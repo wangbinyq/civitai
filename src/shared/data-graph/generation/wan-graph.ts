@@ -253,14 +253,6 @@ const wan21Graph = new DataGraph<WanVersionCtx, GenerationCtx>()
  * Wan 2.2 subgraph - advanced controls with negative prompt, shift, interpolation
  */
 const wan22Graph = new DataGraph<WanVersionCtx, GenerationCtx>()
-  .node(
-    'aspectRatio',
-    (ctx) => ({
-      ...aspectRatioNode({ options: wan22AspectRatios, defaultValue: '1:1' }),
-      when: !(Array.isArray(ctx.images) && ctx.images.length > 0),
-    }),
-    ['images']
-  )
   .node('negativePrompt', negativePromptNode())
   .node('resolution', {
     input: z.enum(['480p', '720p']).optional(),
@@ -268,6 +260,19 @@ const wan22Graph = new DataGraph<WanVersionCtx, GenerationCtx>()
     defaultValue: '480p' as const,
     meta: { options: wan22Resolutions },
   })
+  .node(
+    'aspectRatio',
+    (ctx) => {
+      const resolution = (ctx as { resolution?: string }).resolution ?? '480p';
+      const options =
+        wan25AspectRatiosByResolution[resolution] ?? wan25AspectRatiosByResolution['480p'];
+      return {
+        ...aspectRatioNode({ options, defaultValue: '1:1' }),
+        when: !(Array.isArray(ctx.images) && ctx.images.length > 0),
+      };
+    },
+    ['images', 'resolution']
+  )
   .node('shift', {
     input: z.coerce.number().min(1).max(20).optional(),
     output: z.number().min(1).max(20),

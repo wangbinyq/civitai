@@ -1,8 +1,10 @@
 import { Alert, Input } from '@mantine/core';
 import { Radio } from '~/libs/form/components/RadioGroup';
 import type {
-  TargetDimensionsMeta,
-  UpscaleDimensionOption,
+  UpscaleMultiplierOption,
+  UpscaleResolutionOption,
+  UpscaleSelection,
+  UpscaleSelectionMeta,
 } from '~/shared/data-graph/generation/image-upscale-graph';
 
 // =============================================================================
@@ -10,9 +12,9 @@ import type {
 // =============================================================================
 
 export interface UpscaleDimensionsInputProps {
-  value?: { width: number; height: number };
-  onChange?: (value: { width: number; height: number }) => void;
-  meta: TargetDimensionsMeta;
+  value?: UpscaleSelection;
+  onChange?: (value: UpscaleSelection) => void;
+  meta: UpscaleSelectionMeta;
   disabled?: boolean;
 }
 
@@ -29,6 +31,9 @@ export function UpscaleDimensionsInput({
   const { sourceWidth, sourceHeight, maxOutputResolution, multiplierOptions, resolutionOptions } =
     meta;
 
+  // Derive target dimensions from the selected option in meta
+  const targetDimensions = getSelectedDimensions(value, multiplierOptions, resolutionOptions);
+
   if (!sourceWidth || !sourceHeight) {
     return (
       <Input.Wrapper label="Upscale">
@@ -41,40 +46,29 @@ export function UpscaleDimensionsInput({
     return (
       <Input.Wrapper label="Upscale">
         <Alert color="yellow">
-          This image cannot be upscaled further. Maximum output resolution is{' '}
-          {maxOutputResolution}px.
+          This image cannot be upscaled further. Maximum output resolution is {maxOutputResolution}
+          px.
         </Alert>
       </Input.Wrapper>
     );
   }
 
-  // Use max dimension as the comparison key (unique per option)
-  const selectedKey = value ? Math.max(value.width, value.height) : undefined;
-
-  function handleSelect(option: UpscaleDimensionOption) {
-    if (!option.disabled) {
-      onChange?.({ width: option.width, height: option.height });
-    }
-  }
-
   return (
     <div className="flex flex-col gap-3">
       {multiplierOptions.length > 0 && (
-        <OptionGroup
-          label="Upscale Multiplier"
+        <MultiplierGroup
           options={multiplierOptions}
-          selectedKey={selectedKey}
-          onSelect={handleSelect}
+          selected={value?.type === 'multiplier' ? value.multiplier : null}
+          onSelect={(multiplier) => onChange?.({ type: 'multiplier', multiplier })}
           disabled={disabled}
         />
       )}
 
       {resolutionOptions.length > 0 && (
-        <OptionGroup
-          label="Upscale Resolution"
+        <ResolutionGroup
           options={resolutionOptions}
-          selectedKey={selectedKey}
-          onSelect={handleSelect}
+          selected={value?.type === 'resolution' ? value.resolution : null}
+          onSelect={(resolution) => onChange?.({ type: 'resolution', resolution })}
           disabled={disabled}
         />
       )}
@@ -87,11 +81,11 @@ export function UpscaleDimensionsInput({
             {sourceWidth} × {sourceHeight}
           </span>
         </div>
-        {value && (
+        {targetDimensions && (
           <div className="flex justify-between text-sm">
             <span className="font-medium">Upscaled:</span>
             <span className="font-medium">
-              {value.width} × {value.height}
+              {targetDimensions.width} × {targetDimensions.height}
             </span>
           </div>
         )}
@@ -101,40 +95,78 @@ export function UpscaleDimensionsInput({
 }
 
 // =============================================================================
-// Option Group
+// Option Groups
 // =============================================================================
 
-function OptionGroup({
-  label,
+function MultiplierGroup({
   options,
-  selectedKey,
+  selected,
   onSelect,
   disabled,
 }: {
-  label: string;
-  options: UpscaleDimensionOption[];
-  selectedKey: number | undefined;
-  onSelect: (option: UpscaleDimensionOption) => void;
+  options: UpscaleMultiplierOption[];
+  selected: number | null;
+  onSelect: (multiplier: number) => void;
   disabled?: boolean;
 }) {
-  // Use max dimension as radio value for comparison
-  const radioValue = selectedKey;
-
   return (
-    <Input.Wrapper label={label}>
+    <Input.Wrapper label="Upscale Multiplier">
       <Radio.Group
-        value={radioValue}
-        onChange={(key: number) => {
-          const option = options.find((o) => Math.max(o.width, o.height) === key);
-          if (option) onSelect(option);
-        }}
+        value={selected}
+        onChange={(v: number) => onSelect(v)}
         className="flex gap-2"
         disabled={disabled}
       >
         {options.map((option) => (
           <Radio.Item
-            key={`${option.width}x${option.height}`}
-            value={Math.max(option.width, option.height)}
+            key={option.multiplier}
+            value={option.multiplier}
+            label={option.label}
+            disabled={option.disabled}
+          />
+        ))}
+      </Radio.Group>
+    </Input.Wrapper>
+  );
+}
+
+function getSelectedDimensions(
+  value: UpscaleSelection | undefined,
+  multiplierOptions: UpscaleMultiplierOption[],
+  resolutionOptions: UpscaleResolutionOption[]
+): { width: number; height: number } | undefined {
+  if (!value) return undefined;
+  if (value.type === 'multiplier') {
+    const option = multiplierOptions.find((o) => o.multiplier === value.multiplier);
+    return option ? { width: option.width, height: option.height } : undefined;
+  }
+  const option = resolutionOptions.find((o) => o.resolution === value.resolution);
+  return option ? { width: option.width, height: option.height } : undefined;
+}
+
+function ResolutionGroup({
+  options,
+  selected,
+  onSelect,
+  disabled,
+}: {
+  options: UpscaleResolutionOption[];
+  selected: number | null;
+  onSelect: (resolution: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Input.Wrapper label="Upscale Resolution">
+      <Radio.Group
+        value={selected}
+        onChange={(v: number) => onSelect(v)}
+        className="flex gap-2"
+        disabled={disabled}
+      >
+        {options.map((option) => (
+          <Radio.Item
+            key={option.resolution}
+            value={option.resolution}
             label={option.label}
             disabled={option.disabled}
           />

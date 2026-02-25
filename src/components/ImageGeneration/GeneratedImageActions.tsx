@@ -156,7 +156,6 @@ export function GeneratedImageActions({
             const dateString = image.createdAt.toISOString().replaceAll(':', '.').split('.');
             dateString.pop();
             name = `${dateString.join('.')}_${image.index}`;
-            console.log({ dateString, name });
           }
 
           const file = new File([blob], name);

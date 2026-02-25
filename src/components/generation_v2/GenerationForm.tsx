@@ -245,7 +245,7 @@ export function GenerationForm() {
 
   return (
     <div className="flex size-full flex-1 flex-col">
-      <div className="flex-1 overflow-auto p-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--mantine-color-default-border)] [&::-webkit-scrollbar]:w-1.5">
+      <div className="flex-1 overflow-auto p-2">
         <Stack gap="sm" className="w-full">
           {/* Workflow and ecosystem selectors - inline */}
           <Group gap="xs" wrap="nowrap" className="w-full justify-between">
@@ -553,10 +553,10 @@ export function GenerationForm() {
             )}
           />
 
-          {/* Target dimensions (img2img:upscale) */}
+          {/* Upscale selection (img2img:upscale) */}
           <Controller
             graph={graph}
-            name="targetDimensions"
+            name="upscaleSelection"
             render={({ value, meta, onChange }) => (
               <UpscaleDimensionsInput value={value} onChange={onChange} meta={meta} />
             )}

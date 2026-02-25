@@ -261,7 +261,10 @@ export function sliderNode({
  */
 export function seedNode() {
   return {
-    input: z.union([z.undefined(), z.coerce.number().int().min(1).max(MAX_SEED)]).optional(),
+    input: z
+      .union([z.null(), z.undefined(), z.coerce.number().int().min(1).max(MAX_SEED)])
+      .optional()
+      .transform((val) => (val === null ? undefined : val)),
     output: z.number().int().min(1).max(MAX_SEED).optional(),
     defaultValue: undefined,
   };

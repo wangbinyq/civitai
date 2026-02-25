@@ -395,7 +395,7 @@ export async function applyWorkflowWithCheck({
       params: {
         ...step.metadata.params,
         workflow: workflowId,
-        seed: null,
+        seed: undefined,
         ...(images ? { images } : {}),
         ...(inputType === 'video' ? { video: image.url } : {}),
       },
