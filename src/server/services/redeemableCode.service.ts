@@ -101,7 +101,6 @@ export async function getMyPurchasedCodes({ userId }: { userId: number }) {
   return dbRead.redeemableCode.findMany({
     where: {
       userId,
-      transactionId: { startsWith: 'code-' },
     },
     select: {
       code: true,
