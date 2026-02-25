@@ -204,7 +204,6 @@ export async function createEcosystemStepInput(
     ...data,
     seed: data.seed ?? Math.floor(Math.random() * maxRandomSeed),
   };
-  const { ecosystem } = normalizedData;
 
   const step = await createEcosystemStep(normalizedData, handlerCtx);
 

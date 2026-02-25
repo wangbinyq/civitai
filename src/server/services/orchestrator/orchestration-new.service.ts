@@ -48,13 +48,14 @@ import { Availability } from '~/shared/utils/prisma/enums';
 import { isDefined } from '~/utils/type-guards';
 import { WORKFLOW_TAGS } from '~/shared/constants/generation.constants';
 import { includesPoi } from '~/utils/metadata/audit';
-import { ecosystemByKey, getEcosystemName } from '~/shared/constants/basemodel.constants';
+import { ecosystemByKey } from '~/shared/constants/basemodel.constants';
 import { toStepMetadata } from '~/shared/utils/resource.utils';
 import { auditPromptServer } from '~/server/services/orchestrator/promptAuditing';
 
 // Ecosystem handlers - unified router
 import { createEcosystemStepInput } from './ecosystems';
 import { createComfyInput } from './ecosystems/comfy-input';
+import { removeEmpty } from '~/utils/object-helpers';
 
 // =============================================================================
 // Types
@@ -608,6 +609,8 @@ export async function createWorkflowStepFromGraph({
   // Check if this is an enhancement workflow with source metadata
   const isEnhancement = workflowConfigByKey.get(data.workflow)?.enhancement === true;
 
+  let imageMetadata: string | undefined = (input as Record<string, unknown>)
+    .imageMetadata as string;
   // For enhancement workflows with source metadata, restructure metadata to preserve original generation
   if (!isWhatIf && isEnhancement && sourceMetadata) {
     // Use original params/resources as the root-level metadata
@@ -625,11 +628,21 @@ export async function createWorkflowStepFromGraph({
     // Otherwise, create a new transformations array with just this enhancement
     const existingTransformations = sourceMetadata.transformations ?? [];
     metadata.transformations = [...existingTransformations, newTransformation];
+    imageMetadata = JSON.stringify(
+      removeEmpty({
+        ...sourceMetadata.params,
+        resources: sourceMetadata.resources,
+      })
+    );
   }
 
   return {
     $type,
-    input: { ...(input as object), outputFormat: data.outputFormat },
+    input: {
+      ...(input as object),
+      outputFormat: data.outputFormat,
+      imageMetadata,
+    },
     priority: data.priority,
     timeout,
     metadata: isWhatIf ? undefined : metadata,
