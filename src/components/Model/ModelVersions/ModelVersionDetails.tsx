@@ -444,12 +444,7 @@ function ModelVersionDetailsContent({
           )}
           {!!liveMetrics.earnedAmount && (
             <IconBadge radius="xs" icon={<IconBolt size={14} />} tooltip="Buzz Earned">
-              <Text
-                fz={11}
-                fw="bold"
-                title={liveMetrics.earnedAmount.toLocaleString()}
-                inline
-              >
+              <Text fz={11} fw="bold" title={liveMetrics.earnedAmount.toLocaleString()} inline>
                 {abbreviateNumber(liveMetrics.earnedAmount)}
               </Text>
             </IconBadge>

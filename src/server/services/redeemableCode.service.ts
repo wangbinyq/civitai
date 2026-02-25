@@ -97,6 +97,25 @@ async function getMatchingGiftNotices(buzzValue: number): Promise<GiftNotice[]> 
   return matchingNotices;
 }
 
+export async function getMyPurchasedCodes({ userId }: { userId: number }) {
+  return dbRead.redeemableCode.findMany({
+    where: {
+      userId,
+      transactionId: { startsWith: 'code-' },
+    },
+    select: {
+      code: true,
+      type: true,
+      unitValue: true,
+      createdAt: true,
+      expiresAt: true,
+      redeemedAt: true,
+      priceId: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function createRedeemableCodes({
   unitValue,
   type,
