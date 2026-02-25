@@ -14,6 +14,7 @@ import { GenerationProvider } from '~/components/ImageGeneration/GenerationProvi
 import { GenerateButton } from '~/components/Orchestrator/components/GenerateButton';
 import { GenForm } from '~/components/Generation/Form/GenForm';
 import { useForm } from '~/libs/form';
+import { useGenerateFromGraph } from '~/components/ImageGeneration/utils/generationRequestHooks';
 import { trpc } from '~/utils/trpc';
 import { useBuzzTransaction } from '~/components/Buzz/buzz.utils';
 import { numberWithCommas } from '~/utils/number-helpers';
@@ -83,7 +84,7 @@ export function BackgroundRemovalModal({ sourceImage, metadata }: BackgroundRemo
     enabled: !!currentImage.url,
   });
 
-  const generateMutation = trpc.orchestrator.generateFromGraph.useMutation();
+  const generateMutation = useGenerateFromGraph();
 
   const { conditionalPerformTransaction } = useBuzzTransaction({
     accountTypes: buzzSpendTypes,

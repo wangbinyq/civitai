@@ -37,7 +37,7 @@ import { UpscaleImageModal } from '~/components/Orchestrator/components/UpscaleI
 import { BackgroundRemovalModal } from '~/components/Orchestrator/components/BackgroundRemovalModal';
 import { VideoInterpolationModal } from '~/components/Orchestrator/components/VideoInterpolationModal';
 import { UpscaleVideoModal } from '~/components/Orchestrator/components/UpscaleVideoModal';
-import { getSourceImageFromUrl } from '~/utils/image-utils';
+import { getImageDimensions, getSourceImageFromUrl } from '~/utils/image-utils';
 
 // =============================================================================
 // Types
@@ -174,7 +174,7 @@ function getTargetEcosystemKey(
 /**
  * Send generated output data to the generation form for a specific workflow.
  */
-function applyWorkflowToForm({
+async function applyWorkflowToForm({
   workflowId,
   image,
   step,
@@ -202,9 +202,16 @@ function applyWorkflowToForm({
   const isImageType = image.type !== 'video';
   const acceptsImages =
     inputType === 'image' || (isImageType && workflowHasNode(workflowId, 'images'));
-  const images = acceptsImages
-    ? [{ url: image.url, width: image.width, height: image.height }]
-    : undefined;
+
+  let images: { url: string; width: number; height: number }[] | undefined;
+  if (acceptsImages) {
+    // Verify actual image dimensions — stored metadata may be stale or incorrect
+    const dims = await getImageDimensions(image.url).catch(() => ({
+      width: image.width,
+      height: image.height,
+    }));
+    images = [{ url: image.url, width: dims.width, height: dims.height }];
+  }
 
   if (isEnhancement && step.metadata) {
     // Store source metadata keyed by the image/video URL
@@ -353,7 +360,7 @@ export async function applyWorkflowWithCheck({
 
   // Enhancement and standalone workflows: apply directly (no ecosystem choice needed)
   if (isEnhancement || isStandalone) {
-    applyWorkflowToForm({
+    await applyWorkflowToForm({
       workflowId,
       image,
       step,
@@ -363,15 +370,47 @@ export async function applyWorkflowWithCheck({
     return;
   }
 
-  // All other workflows: show ecosystem selection modal
+  // If the generated image's ecosystem is already compatible, skip the modal
+  // and treat it like a remix — send all original params/resources with the
+  // workflow overridden so the form is fully populated from the generated image.
+  if (compatible && ecosystemKey) {
+    dialogStore.closeById('generated-image');
+    generationGraphPanel.setView('generate');
+
+    const inputType = getInputTypeForWorkflow(workflowId);
+    const isImageType = image.type !== 'video';
+    const acceptsImages =
+      inputType === 'image' || (isImageType && workflowHasNode(workflowId, 'images'));
+
+    let images: { url: string; width: number; height: number }[] | undefined;
+    if (acceptsImages) {
+      const dims = await getImageDimensions(image.url).catch(() => ({
+        width: image.width,
+        height: image.height,
+      }));
+      images = [{ url: image.url, width: dims.width, height: dims.height }];
+    }
+
+    generationGraphStore.setData({
+      params: {
+        ...step.metadata.params,
+        workflow: workflowId,
+        seed: null,
+        ...(images ? { images } : {}),
+        ...(inputType === 'video' ? { video: image.url } : {}),
+      },
+      resources: step.resources,
+      runType: 'remix',
+    });
+    return;
+  }
+
+  // Incompatible ecosystem: show ecosystem selection modal
   const compatibleIds = getEcosystemsForWorkflow(workflowId);
 
   // Determine default ecosystem key
   let defaultKey: string;
-  if (compatible && ecosystemKey) {
-    // Current ecosystem is compatible — pre-select it
-    defaultKey = ecosystemKey;
-  } else {
+  {
     // Incompatible — use stored preference or first valid ecosystem
     const storedPref = workflowPreferences.getPreferredEcosystem(workflowId);
     const storedEco = storedPref ? ecosystemByKey.get(storedPref) : undefined;

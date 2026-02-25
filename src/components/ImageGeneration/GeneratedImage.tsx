@@ -35,7 +35,7 @@ import { mediaDropzoneData } from '~/store/post-image-transmitter.store';
 
 import { getStepMeta } from './GenerationForm/generation.utils';
 import classes from './GeneratedImage.module.css';
-import GeneratedImageLightbox from '~/components/ImageGeneration/GeneratedImageLightbox'
+import GeneratedImageLightbox from '~/components/ImageGeneration/GeneratedImageLightbox';
 
 // const GeneratedImageLightbox = dynamic(
 //   () => import('~/components/ImageGeneration/GeneratedImageLightbox'),
@@ -275,7 +275,7 @@ export function GeneratedImage({
                   </LegacyActionIcon>
                 </div>
               </Menu.Target>
-              <Menu.Dropdown>
+              <Menu.Dropdown className={classes.scrollableDropdown}>
                 <GeneratedItemWorkflowMenu
                   step={step}
                   image={image}
@@ -362,7 +362,7 @@ function GeneratedImageActions({
 
       <Menu
         zIndex={400}
-        trigger="hover"
+        trigger="click-hover"
         openDelay={100}
         closeDelay={100}
         transitionProps={{
@@ -379,7 +379,7 @@ function GeneratedImageActions({
             <IconWand size={16} />
           </LegacyActionIcon>
         </Menu.Target>
-        <Menu.Dropdown className={classes.improveMenu}>
+        <Menu.Dropdown className={clsx(classes.improveMenu, classes.scrollableDropdown)}>
           <GeneratedItemWorkflowMenu
             step={step}
             image={image}

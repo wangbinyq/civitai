@@ -17,6 +17,7 @@ import { GenerateButton } from '~/components/Orchestrator/components/GenerateBut
 import { GenForm } from '~/components/Generation/Form/GenForm';
 import { useForm } from '~/libs/form';
 import { trpc } from '~/utils/trpc';
+import { useGenerateFromGraph } from '~/components/ImageGeneration/utils/generationRequestHooks';
 import { useBuzzTransaction } from '~/components/Buzz/buzz.utils';
 import { numberWithCommas } from '~/utils/number-helpers';
 import { buzzSpendTypes } from '~/shared/constants/buzz.constants';
@@ -72,7 +73,7 @@ export function UpscaleVideoModal({ videoUrl, metadata }: UpscaleVideoModalProps
     enabled: !!videoUrl,
   });
 
-  const generateMutation = trpc.orchestrator.generateFromGraph.useMutation();
+  const generateMutation = useGenerateFromGraph();
 
   const { conditionalPerformTransaction } = useBuzzTransaction({
     accountTypes: buzzSpendTypes,

@@ -43,3 +43,10 @@
   box-shadow: 0 -2px 6px 1px rgba(0, 0, 0, 0.16);
   padding: 4px;
 }
+
+.scrollableDropdown {
+  @media (max-height: 700px) {
+    max-height: calc(90dvh - 32px);
+    overflow-y: auto;
+  }
+}

@@ -18,6 +18,7 @@ import { GenForm } from '~/components/Generation/Form/GenForm';
 import { useForm } from '~/libs/form';
 import { Radio } from '~/libs/form/components/RadioGroup';
 import { trpc } from '~/utils/trpc';
+import { useGenerateFromGraph } from '~/components/ImageGeneration/utils/generationRequestHooks';
 import { useBuzzTransaction } from '~/components/Buzz/buzz.utils';
 import { numberWithCommas } from '~/utils/number-helpers';
 import { buzzSpendTypes } from '~/shared/constants/buzz.constants';
@@ -93,7 +94,7 @@ export function VideoInterpolationModal({
     enabled: enabled && !!videoUrl,
   });
 
-  const generateMutation = trpc.orchestrator.generateFromGraph.useMutation();
+  const generateMutation = useGenerateFromGraph();
 
   const { conditionalPerformTransaction } = useBuzzTransaction({
     accountTypes: buzzSpendTypes,

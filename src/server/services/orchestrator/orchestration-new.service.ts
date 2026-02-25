@@ -10,7 +10,7 @@
  * 1. WORKFLOW DISCRIMINATOR (first level):
  *    - vid2vid:interpolate → videoInterpolation step
  *    - vid2vid:upscale → videoUpscaler step
- *    - img2img:upscale → imageUpscaler step
+ *    - img2img:upscale → comfy step (img2img-upscale)
  *    - img2img:remove-background → comfy step
  *    - All other workflows → ecosystem discriminator
  *
@@ -442,21 +442,27 @@ function createVideoUpscaleInput(
 /**
  * Handle img2img:upscale workflow
  */
-function createImageUpscaleInput(
+async function createImageUpscaleInput(
   data: Extract<GenerationGraphOutput, { workflow: 'img2img:upscale' }>
-): StepInput {
+): Promise<StepInput> {
   const sourceImage = data.images?.[0];
   if (!sourceImage?.url) {
     throw new Error('Image URL is required for image upscaling');
   }
 
-  return {
-    $type: 'imageUpscaler',
-    input: {
+  const targetDimensions = data.targetDimensions;
+  if (!targetDimensions?.width || !targetDimensions?.height) {
+    throw new Error('Target dimensions are required for image upscaling');
+  }
+
+  return createComfyInput({
+    key: 'img2img-upscale',
+    params: {
       image: sourceImage.url,
-      scaleFactor: data.scaleFactor,
+      upscaleWidth: targetDimensions.width,
+      upscaleHeight: targetDimensions.height,
     },
-  };
+  });
 }
 
 /**

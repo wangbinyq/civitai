@@ -84,6 +84,7 @@ import { InterpolationFactorInput } from './inputs/InterpolationFactorInput';
 import { PriorityInput } from './inputs/PriorityInput';
 import { OutputFormatInput } from './inputs/OutputFormatInput';
 import { ScaleFactorInput } from './inputs/ScaleFactorInput';
+import { UpscaleDimensionsInput } from './inputs/UpscaleDimensionsInput';
 import { SegmentedControlWrapper } from '~/libs/form/components/SegmentedControlWrapper';
 import { ButtonGroupInput } from '~/libs/form/components/ButtonGroupInput';
 import { KlingElementsInput } from './inputs/KlingElementsInput';
@@ -536,7 +537,7 @@ export function GenerationForm() {
             }}
           />
 
-          {/* Scale factor (img2img:upscale, vid2vid:upscale) */}
+          {/* Scale factor (vid2vid:upscale) */}
           <Controller
             graph={graph}
             name="scaleFactor"
@@ -549,6 +550,15 @@ export function GenerationForm() {
                 maxResolution={meta.maxOutputResolution}
                 options={meta.options}
               />
+            )}
+          />
+
+          {/* Target dimensions (img2img:upscale) */}
+          <Controller
+            graph={graph}
+            name="targetDimensions"
+            render={({ value, meta, onChange }) => (
+              <UpscaleDimensionsInput value={value} onChange={onChange} meta={meta} />
             )}
           />
 

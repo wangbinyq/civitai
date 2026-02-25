@@ -68,7 +68,10 @@ import { numberWithCommas } from '~/utils/number-helpers';
 import { useAppContext } from '~/providers/AppProvider';
 import { isDefined } from '~/utils/type-guards';
 import type { BlobData } from '~/components/ImageGeneration/utils/BlobData';
-import { workflowConfigByKey } from '~/shared/data-graph/generation/config/workflows';
+import {
+  workflowConfigByKey,
+  workflowConfigs,
+} from '~/shared/data-graph/generation/config/workflows';
 
 const PENDING_PROCESSING_STATUSES: WorkflowStatus[] = [
   ...orchestratorPendingStatuses,
@@ -179,8 +182,9 @@ export function QueueItem({
       !['img2img-upscale', 'img2img-background-removal'].includes(step.params.workflow)) ||
     (!!step.params.engine && step.images.length > 0);
 
-  const { data: workflowDefinitions } = trpc.generation.getWorkflowDefinitions.useQuery();
-  const workflowDefinition = workflowDefinitions?.find((x) => x.key === params.workflow);
+  // const { data: workflowDefinitions } = trpc.generation.getWorkflowDefinitions.useQuery();
+  const workflowDefinition =
+    workflowConfigs[step.metadata.params.workflow as keyof typeof workflowConfigs];
 
   const engine = step.metadata.params.engine as string | undefined;
   const version = step.metadata.params.version as string | undefined;

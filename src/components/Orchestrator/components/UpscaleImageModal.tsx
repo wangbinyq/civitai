@@ -14,6 +14,7 @@ import { GenerationProvider } from '~/components/ImageGeneration/GenerationProvi
 import { GenerateButton } from '~/components/Orchestrator/components/GenerateButton';
 import { GenForm } from '~/components/Generation/Form/GenForm';
 import { useForm } from '~/libs/form';
+import { useGenerateFromGraph } from '~/components/ImageGeneration/utils/generationRequestHooks';
 import { trpc } from '~/utils/trpc';
 import { useBuzzTransaction } from '~/components/Buzz/buzz.utils';
 import { numberWithCommas } from '~/utils/number-helpers';
@@ -60,8 +61,8 @@ const schema = z.object({
     .refine((data) => {
       const targetWidth = data.upscaleWidth ?? data.width;
       const targetHeight = data.upscaleHeight ?? data.height;
-      return targetWidth < maxUpscaleSize && targetHeight < maxUpscaleSize;
-    }, `Output dimensions must be less than ${maxUpscaleSize}px`),
+      return targetWidth <= maxUpscaleSize && targetHeight <= maxUpscaleSize;
+    }, `Output dimensions must not exceed ${maxUpscaleSize}px`),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -81,6 +82,11 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
   const currentImage = watched.sourceImage ?? sourceImage;
 
   // Build graph-compatible input for whatIf query
+  const targetDimensions =
+    currentImage.upscaleWidth && currentImage.upscaleHeight
+      ? { width: currentImage.upscaleWidth, height: currentImage.upscaleHeight }
+      : undefined;
+
   const graphInput = {
     workflow: 'img2img:upscale',
     images: [
@@ -90,14 +96,14 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
         height: currentImage.height,
       },
     ],
-    scaleFactor: currentImage.upscaleMultiplier ?? 2,
+    targetDimensions,
   };
 
   const whatIf = trpc.orchestrator.whatIfFromGraph.useQuery(graphInput, {
     enabled: !!currentImage.url,
   });
 
-  const generateMutation = trpc.orchestrator.generateFromGraph.useMutation();
+  const generateMutation = useGenerateFromGraph();
 
   const { conditionalPerformTransaction } = useBuzzTransaction({
     accountTypes: buzzSpendTypes,
@@ -112,6 +118,11 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
     const totalCost = whatIf.data?.cost?.total ?? 0;
 
     async function performTransaction() {
+      const dims =
+        data.sourceImage.upscaleWidth && data.sourceImage.upscaleHeight
+          ? { width: data.sourceImage.upscaleWidth, height: data.sourceImage.upscaleHeight }
+          : undefined;
+
       await generateMutation.mutateAsync({
         input: {
           workflow: 'img2img:upscale',
@@ -122,7 +133,7 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
               height: data.sourceImage.height,
             },
           ],
-          scaleFactor: data.sourceImage.upscaleMultiplier ?? 2,
+          targetDimensions: dims,
         },
         sourceMetadata: metadata,
       });

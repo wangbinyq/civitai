@@ -330,7 +330,7 @@ if ('test'.length > 5) {
     // Test non-ecosystem workflows - these define their own images node
     if (data.workflow === 'img2img:upscale') {
       console.log(data.images);
-      console.log(data.scaleFactor);
+      console.log(data.targetDimensions);
     }
 
     if (data.workflow === 'txt2vid') {
