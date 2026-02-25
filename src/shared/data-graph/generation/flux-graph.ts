@@ -195,7 +195,7 @@ export const fluxGraph = new DataGraph<
       createCheckpointGraph({
         versions: { options: fluxModeVersionOptions },
         modelLocked: ctx.workflow === 'txt2img:draft',
-        defaultModelId: fluxVersionIds.standard,
+        // defaultModelId: fluxVersionIds.standard,
       }),
     ['workflow']
   )
