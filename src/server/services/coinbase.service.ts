@@ -1,15 +1,16 @@
 import { env } from 'process';
 import { logToAxiom } from '../logging/client';
 import Decimal from 'decimal.js';
-import type { CreateBuzzCharge } from '~/server/schema/coinbase.schema';
+import type { CreateBuzzCharge, CreateCodeOrder } from '~/server/schema/coinbase.schema';
 import { COINBASE_FIXED_FEE, specialCosmeticRewards } from '~/server/common/constants';
 import coinbaseCaller from '~/server/http/coinbase/coinbase.caller';
 import type { Coinbase } from '~/server/http/coinbase/coinbase.schema';
 import { grantBuzzPurchase } from '~/server/services/buzz.service';
 import { grantCosmetics } from '~/server/services/cosmetic.service';
 import { dbRead, dbWrite } from '~/server/db/client';
-import { RedeemableCodeType } from '~/shared/utils/prisma/enums';
+import { PaymentProvider, RedeemableCodeType } from '~/shared/utils/prisma/enums';
 import { redeemableCodePurchaseEmail } from '~/server/email/templates/redeemableCodePurchase.email';
+import { subscriptionProductMetadataSchema } from '~/server/schema/subscriptions.schema';
 
 const log = async (data: MixedObject) => {
   await logToAxiom({ name: 'coinbase-service', type: 'error', ...data }).catch();
@@ -38,6 +39,82 @@ export const createBuzzOrder = async (input: CreateBuzzCharge & { userId: number
       userId: input.userId,
       buzzAmount: input.buzzAmount,
       internalOrderId: orderId,
+    },
+    redirect_url: successUrl,
+    cancel_url: env.NEXTAUTH_URL || '',
+  });
+
+  if (!charge) {
+    throw new Error('Failed to create charge');
+  }
+
+  return charge;
+};
+
+export const createCodeOrder = async (input: CreateCodeOrder & { userId: number }) => {
+  const orderId = `code-${input.userId}-${new Date().getTime()}`;
+
+  let unitAmountCents: number;
+  let description: string;
+  let codeType: 'Buzz' | 'Membership';
+  let codeUnitValue: number;
+  let codePriceId: string | undefined;
+
+  if (input.type === 'Buzz') {
+    codeType = 'Buzz';
+    codeUnitValue = input.buzzAmount;
+    unitAmountCents = input.buzzAmount / 10; // 10 buzz = 1 cent
+    description = `Redeemable code for ${input.buzzAmount.toLocaleString()} Buzz`;
+  } else {
+    codeType = 'Membership';
+    codeUnitValue = input.months;
+
+    // Look up the membership product/price from DB
+    const product = await dbRead.product.findFirst({
+      where: {
+        provider: PaymentProvider.Civitai,
+        active: true,
+        metadata: { path: ['tier'], equals: input.tier },
+      },
+      select: {
+        id: true,
+        name: true,
+        prices: {
+          where: { active: true, interval: 'month' },
+          select: { id: true, unitAmount: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (!product || product.prices.length === 0) {
+      throw new Error(`No active price found for ${input.tier} membership`);
+    }
+
+    const price = product.prices[0];
+    codePriceId = price.id;
+    unitAmountCents = (price.unitAmount ?? 0) * input.months;
+    description = `Redeemable code for ${input.months}-month ${input.tier} membership`;
+  }
+
+  const successUrl =
+    `${env.NEXTAUTH_URL || ''}/payment/coinbase-code?` +
+    new URLSearchParams([['orderId', orderId]]);
+
+  const charge = await coinbaseCaller.createCharge({
+    name: `Redeemable code purchase`,
+    description,
+    pricing_type: 'fixed_price',
+    local_price: {
+      amount: new Decimal(unitAmountCents + COINBASE_FIXED_FEE).dividedBy(100).toString(),
+      currency: 'USD',
+    },
+    metadata: {
+      userId: input.userId,
+      internalOrderId: orderId,
+      codeType,
+      codeUnitValue,
+      codePriceId,
     },
     redirect_url: successUrl,
     cancel_url: env.NEXTAUTH_URL || '',
