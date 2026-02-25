@@ -156,6 +156,7 @@ const aiToolkitTrainingDetailsParams = z.object({
     'adagrad',
     'prodigy',
     'prodigy8bit',
+    'automagic',
   ]),
   networkDim: z.number().nullable(),
   networkAlpha: z.number().nullable(),
