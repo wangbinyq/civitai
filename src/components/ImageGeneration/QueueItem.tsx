@@ -183,8 +183,12 @@ export function QueueItem({
     (!!step.params.engine && step.images.length > 0);
 
   // const { data: workflowDefinitions } = trpc.generation.getWorkflowDefinitions.useQuery();
+  const latestTransform =
+    step.metadata.transformations?.[step.metadata.transformations.length - 1]?.workflow;
   const workflowDefinition =
-    workflowConfigs[step.metadata.params.workflow as keyof typeof workflowConfigs];
+    workflowConfigs[
+      latestTransform ?? (step.metadata.params.workflow as keyof typeof workflowConfigs)
+    ];
 
   const engine = step.metadata.params.engine as string | undefined;
   const version = step.metadata.params.version as string | undefined;
@@ -314,7 +318,7 @@ export function QueueItem({
               )}
             </div>
             <div className="5 flex flex-col gap-0">
-              {transformations.length > 0 && (
+              {/* {transformations.length > 0 && (
                 <div className="flex items-center gap-1">
                   <Text size="sm">Transformations:</Text>
                   {transformations.map((transformation, i) => {
@@ -326,7 +330,7 @@ export function QueueItem({
                     );
                   })}
                 </div>
-              )}
+              )} */}
               {resources.length > 0 && (
                 <div className="flex items-center gap-1">
                   <Text size="sm">Resources:</Text>
