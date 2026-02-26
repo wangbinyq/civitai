@@ -43,7 +43,7 @@ import { hiDreamGraph } from './hi-dream-graph';
 import { ponyV7Graph } from './pony-v7-graph';
 import { viduGraph } from './vidu-graph';
 import { openaiGraph } from './openai-graph';
-import { klingGraph } from './kling-graph';
+import { klingGraph, klingVersionIds } from './kling-graph';
 import { wanGraph } from './wan-graph';
 import { hunyuanGraph } from './hunyuan-graph';
 import { ltxv2Graph } from './ltxv2-graph';
@@ -251,8 +251,9 @@ export const ecosystemGraph = new DataGraph<
     'prompt',
     (ctx) => {
       const images = 'images' in ctx ? (ctx.images as unknown[]) : undefined;
-      const multiShot = 'multiShot' in ctx ? (ctx.multiShot as boolean) : false;
-      return { ...promptNode({ required: !images?.length }) };
+      // const multiShot = 'multiShot' in ctx ? (ctx.multiShot as boolean) : false;
+      const isKlingV3 = ctx.ecosystem === 'Kling' && ctx.model?.id === klingVersionIds.v3;
+      return { ...promptNode({ required: !images?.length || isKlingV3 }) };
     },
     ['images', 'multiShot']
   )
