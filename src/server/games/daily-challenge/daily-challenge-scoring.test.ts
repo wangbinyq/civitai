@@ -1,22 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// Mock heavy server-side dependencies so we can test pure scoring functions
-vi.mock('~/server/db/client', () => ({ dbRead: {}, dbWrite: {} }));
-vi.mock('~/server/db/db-lag-helpers', () => ({ getDbWithoutLag: vi.fn() }));
-vi.mock('~/server/redis/client', () => ({
-  sysRedis: { hGetAll: vi.fn(), packed: { hGetAll: vi.fn() } },
-  REDIS_SYS_KEYS: {},
-}));
-vi.mock('~/server/games/daily-challenge/challenge-helpers', () => ({}));
-
+import { describe, it, expect } from 'vitest';
 import {
   calculateWeightedScore,
   SCORE_WEIGHTS,
   THEME_DISQUALIFY_THRESHOLD,
   THEME_GATE_THRESHOLD,
   THEME_GATE_MAX_SCORE,
-} from './daily-challenge.utils';
-import type { Score } from './daily-challenge.utils';
+} from './daily-challenge-scoring';
+import type { Score } from './daily-challenge-scoring';
 
 function makeScore(theme: number, aesthetic: number, humor: number, wittiness: number): Score {
   return { theme, aesthetic, humor, wittiness };

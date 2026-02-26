@@ -9,7 +9,7 @@ import {
   type JudgeScore,
   SCORE_WEIGHTS,
   calculateWeightedScore,
-} from '~/server/games/daily-challenge/daily-challenge.utils';
+} from '~/server/games/daily-challenge/daily-challenge-scoring';
 
 const categories: { key: keyof JudgeScore; label: string; weight: number }[] = [
   { key: 'theme', label: 'Theme', weight: SCORE_WEIGHTS.theme },
