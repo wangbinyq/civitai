@@ -256,6 +256,8 @@ export const createTrainingWorkflow = async ({
            JOIN "ModelFile" mf ON mf."modelVersionId" = mv.id AND mf.type = 'Training Data'
     WHERE mv.id = ${modelVersionId}
       AND m."deletedAt" is null
+    ORDER BY mf.id DESC
+    LIMIT 1
   `;
 
   if (modelVersions.length === 0) throw throwBadRequestError('Invalid model version');
