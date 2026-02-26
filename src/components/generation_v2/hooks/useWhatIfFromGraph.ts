@@ -134,7 +134,7 @@ export function useWhatIfFromGraph({ enabled = true }: UseWhatIfFromGraphOptions
     // When focused, use committed prompt value to avoid race conditions with submit
     // When not focused, use current snapshot value directly (effect updates ref for next focus)
     const promptValue = promptFocused ? promptRef.current : (outputSnapshot.prompt as string);
-    const snapshotForQuery = { ...outputSnapshot, prompt: promptValue };
+    const snapshotForQuery = { ...outputSnapshot, prompt: promptValue || 'cost estimation' };
 
     return filterSnapshotForSubmit(snapshotForQuery, {
       computedKeys: graph.getComputedKeys(),
