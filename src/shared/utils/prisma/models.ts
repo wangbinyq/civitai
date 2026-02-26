@@ -200,6 +200,10 @@ export type ComicGenre = "Action" | "Adventure" | "Comedy" | "Drama" | "Fantasy"
 
 export type UserRestrictionStatus = "Pending" | "Upheld" | "Overturned";
 
+export type StrikeReason = "BlockedContent" | "RealisticMinorContent" | "CSAMContent" | "TOSViolation" | "HarassmentContent" | "ProhibitedContent" | "ManualModAction";
+
+export type StrikeStatus = "Active" | "Expired" | "Voided";
+
 export interface Account {
   id: number;
   userId: number;
@@ -352,6 +356,7 @@ export interface User {
   mutedAt: Date | null;
   muted: boolean;
   muteConfirmedAt: Date | null;
+  muteExpiresAt: Date | null;
   bannedAt: Date | null;
   autoplayGifs: boolean | null;
   filePreferences: JsonValue;
@@ -469,6 +474,9 @@ export interface User {
   challengeWins?: ChallengeWinner[];
   challengeJudges?: ChallengeJudge[];
   challengeEventsCreated?: ChallengeEvent[];
+  strikes?: UserStrike[];
+  issuedStrikes?: UserStrike[];
+  voidedStrikes?: UserStrike[];
   comicProjects?: ComicProject[];
   comicReferences?: ComicReference[];
   comicProjectEngagements?: ComicProjectEngagement[];
@@ -3970,6 +3978,28 @@ export interface PromptAllowlist {
   reason: string | null;
   userRestrictionId: number | null;
   createdAt: Date;
+}
+
+export interface UserStrike {
+  id: number;
+  userId: number;
+  user?: User;
+  reason: StrikeReason;
+  status: StrikeStatus;
+  points: number;
+  description: string;
+  internalNotes: string | null;
+  entityType: EntityType | null;
+  entityId: number | null;
+  reportId: number | null;
+  createdAt: Date;
+  expiresAt: Date;
+  voidedAt: Date | null;
+  voidedBy: number | null;
+  voidedByUser?: User | null;
+  voidReason: string | null;
+  issuedBy: number | null;
+  issuedByUser?: User | null;
 }
 
 type JsonValue = string | number | boolean | { [key in string]?: JsonValue } | Array<JsonValue> | null;
