@@ -12,6 +12,7 @@ import {
 } from '~/server/games/daily-challenge/daily-challenge.utils';
 import { generateReview } from '~/server/games/daily-challenge/generative-content';
 import { logToAxiom } from '~/server/logging/client';
+import { parseChallengeMetadata } from '~/server/schema/challenge.schema';
 import { upsertComment } from '~/server/services/commentsv2.service';
 import { limitConcurrency } from '~/server/utils/concurrency-helpers';
 import { WebhookEndpoint } from '~/server/utils/endpoint-helpers';
@@ -52,6 +53,8 @@ export default WebhookEndpoint(async function (req: NextApiRequest, res: NextApi
   // Load judge config (respects per-challenge prompt override)
   const judgingConfig = await getJudgingConfig(challenge.judgeId, challenge.judgingPrompt);
   const config = await getChallengeConfig();
+  const metadata = parseChallengeMetadata(challenge.metadata);
+  const themeElements = metadata.themeElements;
 
   // Fetch all judged entries with their existing judge comment IDs
   type EntryWithComment = RecentEntry & { judgeCommentId: number | null };
@@ -98,6 +101,7 @@ export default WebhookEndpoint(async function (req: NextApiRequest, res: NextApi
         creator: entry.username,
         imageUrl: getEdgeUrl(entry.url, { width: 1200, name: 'image' }),
         config: judgingConfig,
+        themeElements,
       });
       log('Review generated', entry.imageId, review.score);
 
@@ -140,10 +144,14 @@ export default WebhookEndpoint(async function (req: NextApiRequest, res: NextApi
       });
       log('Failed to re-review entry', entry.imageId, error);
     }
+
+    log(
+      `Progress: ${successes + failures}/${entries.length} (${successes} ok, ${failures} failed)`
+    );
   });
 
   try {
-    await limitConcurrency(tasks, 3);
+    await limitConcurrency(tasks, 10);
   } catch (error) {
     const err = error as Error;
     logToAxiom({

@@ -29,6 +29,8 @@ import type {
   DailyChallengeDetails,
 } from '~/server/games/daily-challenge/daily-challenge.utils';
 import {
+  calculateWeightedScore,
+  SCORE_WEIGHTS,
   challengeToLegacyFormat,
   deriveChallengeNsfwLevel,
   endChallenge,
@@ -1413,10 +1415,10 @@ export async function getJudgedEntries(
         ROW_NUMBER() OVER (
           PARTITION BY i."userId"
           ORDER BY (
-            (ci.note::json->'score'->>'theme')::float +
-            (ci.note::json->'score'->>'wittiness')::float +
-            (ci.note::json->'score'->>'humor')::float +
-            (ci.note::json->'score'->>'aesthetic')::float
+            (ci.note::json->'score'->>'theme')::float * ${SCORE_WEIGHTS.theme} +
+            (ci.note::json->'score'->>'aesthetic')::float * ${SCORE_WEIGHTS.aesthetic} +
+            (ci.note::json->'score'->>'humor')::float * ${SCORE_WEIGHTS.humor} +
+            (ci.note::json->'score'->>'wittiness')::float * ${SCORE_WEIGHTS.wittiness}
           ) DESC
         ) as rn
       FROM "CollectionItem" ci
@@ -1488,17 +1490,14 @@ export async function getJudgedEntries(
     cooldown: cooldownSource,
   });
 
-  // Rank entries purely by AI judge score (no engagement/reaction weighting)
-  const judgedEntries = eligibleEntries.map(({ note, ...entry }) => {
-    const { score, summary } = JSON.parse(note);
-    const rating = (score.theme + score.wittiness + score.humor + score.aesthetic) / 4;
-    return {
-      ...entry,
-      summary,
-      score,
-      weightedRating: rating,
-    };
-  });
+  // Rank entries by weighted AI judge score with theme gate rules
+  const judgedEntries = eligibleEntries
+    .map(({ note, ...entry }) => {
+      const { score, summary } = JSON.parse(note);
+      const weightedRating = calculateWeightedScore(score);
+      return { ...entry, summary, score, weightedRating };
+    })
+    .filter((e): e is typeof e & { weightedRating: number } => e.weightedRating !== null);
   judgedEntries.sort((a, b) => b.weightedRating - a.weightedRating || Math.random() - 0.5);
 
   // Take top entries for final judgment (already one per user from the query)

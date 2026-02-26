@@ -165,7 +165,7 @@ export async function generateThemeElements(input: GenerateThemeElementsInput): 
           content: [
             {
               type: 'text',
-              text: `${input.config.prompts.systemMessage}\n\nGenerate 5-8 short phrases describing the concrete visual elements, colors, moods, objects, or textures expected in images matching a given theme. These will be used to anchor consistent judging of challenge entries. Keep them broad enough to allow creative interpretation.\n\nReply with json\n\n{"themeElements": ["phrase1", "phrase2", ...]}`,
+              text: `${input.config.prompts.systemMessage}\n\nGenerate 5-8 keywords (single words or short 2-3 word combinations) describing the concrete visual elements, colors, moods, objects, or textures expected in images matching a given theme. These will be used to anchor consistent judging of challenge entries. Keep them broad enough to allow creative interpretation.\n\nReply with json\n\n{"themeElements": ["keyword1", "keyword2", ...]}`,
             },
           ],
         },
