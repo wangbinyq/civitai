@@ -81,10 +81,18 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
   const watched = form.watch();
   const currentImage = watched.sourceImage ?? sourceImage;
 
-  // Build graph-compatible input for whatIf query
-  const targetDimensions =
+  // Build graph-compatible input for whatIf query.
+  // The generation graph computes targetDimensions from upscaleSelection, so we must
+  // send upscaleSelection (not targetDimensions directly, which is a computed node and
+  // gets ignored during graph validation).
+  const upscaleSelection =
     currentImage.upscaleWidth && currentImage.upscaleHeight
-      ? { width: currentImage.upscaleWidth, height: currentImage.upscaleHeight }
+      ? {
+          type: 'multiplier' as const,
+          multiplier:
+            Math.max(currentImage.upscaleWidth, currentImage.upscaleHeight) /
+            Math.max(currentImage.width, currentImage.height),
+        }
       : undefined;
 
   const graphInput = {
@@ -96,7 +104,7 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
         height: currentImage.height,
       },
     ],
-    targetDimensions,
+    upscaleSelection,
   };
 
   const whatIf = trpc.orchestrator.whatIfFromGraph.useQuery(graphInput, {
@@ -118,9 +126,14 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
     const totalCost = whatIf.data?.cost?.total ?? 0;
 
     async function performTransaction() {
-      const dims =
+      const selection =
         data.sourceImage.upscaleWidth && data.sourceImage.upscaleHeight
-          ? { width: data.sourceImage.upscaleWidth, height: data.sourceImage.upscaleHeight }
+          ? {
+              type: 'multiplier' as const,
+              multiplier:
+                Math.max(data.sourceImage.upscaleWidth, data.sourceImage.upscaleHeight) /
+                Math.max(data.sourceImage.width, data.sourceImage.height),
+            }
           : undefined;
 
       await generateMutation.mutateAsync({
@@ -133,7 +146,7 @@ export function UpscaleImageModal({ sourceImage, metadata }: UpscaleImageModalPr
               height: data.sourceImage.height,
             },
           ],
-          targetDimensions: dims,
+          upscaleSelection: selection,
         },
         sourceMetadata: metadata,
       });
