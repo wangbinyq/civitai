@@ -176,6 +176,21 @@ export const useGenerationGraphStore = create<GenerationGraphState>()(
             const isMedia = ['audio', 'image', 'video'].includes(input.type);
             const resources = result.resources.map(substituteResource);
 
+            // When remixing enhancement workflows (hires-fix, face-fix), fall back to
+            // txt2img so the user gets a standard generation form.
+            if (isMedia) {
+              const REMIX_WORKFLOW_OVERRIDES: Record<string, string> = {
+                'txt2img:hires-fix': 'txt2img',
+                'img2img:hires-fix': 'txt2img',
+                'txt2img:face-fix': 'txt2img',
+                'img2img:face-fix': 'txt2img',
+              };
+              const w = result.params.workflow as string | undefined;
+              if (w && REMIX_WORKFLOW_OVERRIDES[w]) {
+                result.params.workflow = REMIX_WORKFLOW_OVERRIDES[w];
+              }
+            }
+
             // TEMPORARY: Sync legacy form store (remove with legacy generator)
             syncLegacyFormStore(result.params, resources);
 
