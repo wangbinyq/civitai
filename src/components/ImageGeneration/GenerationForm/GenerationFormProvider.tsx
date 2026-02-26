@@ -255,6 +255,11 @@ function formatGenerationData(data: LegacyGenerationData): PartialFormData {
       params.workflow = 'txt2img';
   }
 
+  // Normalize aspectRatio: legacy metadata stores it as an object { value, width, height }
+  if (params.aspectRatio && typeof params.aspectRatio === 'object') {
+    params.aspectRatio = (params.aspectRatio as { value: string }).value;
+  }
+
   return {
     // Explicitly default image fields so stale values from the previous form state
     // don't survive the merge in setValues (which does {...formData, ...params}).
