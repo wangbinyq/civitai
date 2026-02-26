@@ -152,8 +152,6 @@ export function VideoGenerationForm({ engine }: { engine: OrchestratorEngine2 })
       graphInput.model = model;
       graphInput.resources = splitResources;
 
-      console.log({ graphInput });
-
       // Clone generation graph, initialize with mapped data, and validate
       const graph = generationGraph.clone();
       const externalCtx = buildGraphContext(status);
@@ -168,8 +166,6 @@ export function VideoGenerationForm({ engine }: { engine: OrchestratorEngine2 })
       }
 
       const graphData = result.data;
-
-      console.log({ graphData });
 
       conditionalPerformTransaction(cost, () => {
         mutate({
@@ -363,7 +359,6 @@ function SubmitButton2({
               : [];
 
           const { model, resources: splitResources } = splitResourcesByType(parsedResources);
-          console.log({ parsedResources, model, splitResources });
           graphInput.model = model;
           graphInput.resources = splitResources;
 

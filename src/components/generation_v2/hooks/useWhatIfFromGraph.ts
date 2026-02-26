@@ -34,7 +34,7 @@ import { usePromptFocusedStore } from '../inputs/PromptInput';
  * Changes to these fields will NOT trigger a new whatIf query.
  * Note: 'prompt' IS included because it affects SFW/NSFW classification and pricing.
  */
-const IGNORED_KEYS_FOR_WHATIF = ['negativePrompt', 'seed', 'denoise'] as const;
+const IGNORED_KEYS_FOR_WHATIF = ['negativePrompt', 'seed'] as const;
 
 // =============================================================================
 // Helper Functions

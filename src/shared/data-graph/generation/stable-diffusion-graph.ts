@@ -111,11 +111,11 @@ export const stableDiffusionGraph = new DataGraph<
     sliderNode({
       min: 10,
       max: 50,
-      defaultValue: 25,
+      defaultValue: 30,
       presets: [
-        { label: 'Fast', value: 15 },
-        { label: 'Balanced', value: 25 },
-        { label: 'High', value: 35 },
+        { label: 'Fast', value: 20 },
+        { label: 'Balanced', value: 30 },
+        { label: 'High', value: 40 },
       ],
     })
   )

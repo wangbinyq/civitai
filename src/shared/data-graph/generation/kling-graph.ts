@@ -385,7 +385,7 @@ export const klingGraph = new DataGraph<KlingCtx, GenerationCtx>()
   .merge(
     createCheckpointGraph({
       versions: { options: klingVersionOptions },
-      defaultModelId: klingVersionIds.v3,
+      defaultModelId: klingVersionIds.v2_5_turbo, // Default to V2.5 Turbo for best performance/quality balance
     })
   )
 
