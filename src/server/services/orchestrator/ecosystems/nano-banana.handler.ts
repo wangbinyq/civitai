@@ -2,14 +2,16 @@
  * NanoBanana Ecosystem Handler
  *
  * Handles NanoBanana workflows using imageGen step type.
- * NanoBanana uses the gemini engine with two model variants:
+ * NanoBanana uses the gemini engine with three model variants:
  * - Standard (2.5-flash)
  * - Pro (nano-banana-pro)
+ * - V2 (nano-banana-2)
  */
 
 import type {
   Gemini25FlashCreateImageGenInput,
   Gemini25FlashEditImageGenInput,
+  NanoBanana2ImageGenInput,
   NanoBananaProImageGenInput,
 } from '@civitai/client';
 import { removeEmpty } from '~/utils/object-helpers';
@@ -28,6 +30,7 @@ type NanoBananaCtx = EcosystemGraphOutput & { ecosystem: 'NanoBanana' };
 type NanoBananaInput =
   | Gemini25FlashCreateImageGenInput
   | Gemini25FlashEditImageGenInput
+  | NanoBanana2ImageGenInput
   | NanoBananaProImageGenInput;
 
 // Create reverse map from version ID to mode
@@ -75,6 +78,19 @@ export const createNanoBananaInput = defineHandler<NanoBananaCtx, NanoBananaInpu
         seed: data.seed,
       }) as Gemini25FlashCreateImageGenInput;
     }
+  } else if (model === 'v2') {
+    // V2 model (nano-banana-2)
+    return removeEmpty({
+      engine: 'google',
+      model: 'nano-banana-2',
+      prompt: data.prompt,
+      aspectRatio: aspectRatio?.value,
+      resolution: 'resolution' in data ? data.resolution : undefined,
+      images: data.images?.map((x) => x.url),
+      numImages: quantity,
+      seed: data.seed,
+      enableWebSearch: 'enableWebSearch' in data ? data.enableWebSearch : undefined,
+    }) as NanoBanana2ImageGenInput;
   } else {
     // Pro model (nano-banana-pro)
     return removeEmpty({

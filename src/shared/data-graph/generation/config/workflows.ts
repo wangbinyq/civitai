@@ -18,6 +18,8 @@ import {
   ecosystemById,
   getEcosystemSupport,
 } from '~/shared/constants/basemodel.constants';
+import { klingVersionIds } from '~/shared/data-graph/generation/kling-graph';
+import { nanoBananaVersionIds } from '~/shared/data-graph/generation/nano-banana-graph';
 import {
   type WorkflowCategory,
   type WorkflowConfig,
@@ -491,16 +493,20 @@ export function getWorkflowLabelForEcosystem(graphKey: string, ecosystemId?: num
  */
 type NewFormOnlyRule = true | ((ecosystemId: number, modelId?: number) => boolean);
 
-/** Kling V3 model version ID (from kling-graph.ts klingVersionIds) */
-const KLING_V3_MODEL_ID = 2698632;
-
 const NEW_FORM_ONLY = new Map<string, NewFormOnlyRule>([
   // Kling V3 on standard video workflows (legacy only supports V1.6, V2, V2.5)
-  ['txt2vid', (ecoId, modelId) => ecoId === ECO.Kling && modelId === KLING_V3_MODEL_ID],
-  ['img2vid', (ecoId, modelId) => ecoId === ECO.Kling && modelId === KLING_V3_MODEL_ID],
+  ['txt2vid', (ecoId, modelId) => ecoId === ECO.Kling && modelId === klingVersionIds.v3],
+  ['img2vid', (ecoId, modelId) => ecoId === ECO.Kling && modelId === klingVersionIds.v3],
 
   // ref2vid: legacy forms for Kling and Veo3 don't support this workflow
   ['img2vid:ref2vid', (ecoId) => ecoId === ECO.Kling || ecoId === ECO.Veo3],
+
+  // NanoBanana V2 - only available in new form
+  ['txt2img', (ecoId, modelId) => ecoId === ECO.NanoBanana && modelId === nanoBananaVersionIds.v2],
+  [
+    'img2img:edit',
+    (ecoId, modelId) => ecoId === ECO.NanoBanana && modelId === nanoBananaVersionIds.v2,
+  ],
 ]);
 
 /**

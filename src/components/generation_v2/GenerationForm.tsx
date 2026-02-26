@@ -751,6 +751,25 @@ export function GenerationForm() {
             )}
           />
 
+          {/* Resolution (Wan/Sora video quality) */}
+          <Controller
+            graph={graph}
+            name="resolution"
+            render={({ value, meta, onChange }) => (
+              <div className="flex flex-col gap-1">
+                <Input.Label>Resolution</Input.Label>
+                <SegmentedControlWrapper
+                  value={value}
+                  onChange={(v) => onChange(v as typeof value)}
+                  data={meta.options.map((o: { label: string; value: string }) => ({
+                    label: o.label,
+                    value: o.value,
+                  }))}
+                />
+              </div>
+            )}
+          />
+
           {/* Output Settings (image output only) */}
           <Controller
             graph={graph}
@@ -788,25 +807,6 @@ export function GenerationForm() {
                 </div>
               ) : null
             }
-          />
-
-          {/* Resolution (Wan/Sora video quality) */}
-          <Controller
-            graph={graph}
-            name="resolution"
-            render={({ value, meta, onChange }) => (
-              <div className="flex flex-col gap-1">
-                <Input.Label>Resolution</Input.Label>
-                <SegmentedControlWrapper
-                  value={value}
-                  onChange={(v) => onChange(v as typeof value)}
-                  data={meta.options.map((o: { label: string; value: string }) => ({
-                    label: o.label,
-                    value: o.value,
-                  }))}
-                />
-              </div>
-            )}
           />
 
           {/* Advanced section */}
@@ -1058,6 +1058,20 @@ export function GenerationForm() {
                 <Checkbox
                   label="Enhance prompt"
                   description="Automatically improve your prompt for better results"
+                  checked={value}
+                  onChange={(e) => onChange(e.currentTarget.checked)}
+                />
+              )}
+            />
+
+            {/* NanoBanana V2: Web search toggle */}
+            <Controller
+              graph={graph}
+              name="enableWebSearch"
+              render={({ value, onChange }) => (
+                <Switch
+                  label="Web Search"
+                  description="Enable web search for the image generation task. This will allow the model to use the latest information from the web to generate the image."
                   checked={value}
                   onChange={(e) => onChange(e.currentTarget.checked)}
                 />

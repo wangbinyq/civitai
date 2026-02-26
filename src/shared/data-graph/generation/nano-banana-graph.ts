@@ -4,9 +4,10 @@
  * Controls for NanoBanana ecosystem (Gemini-based).
  * Meta contains only dynamic props - static props defined in components.
  *
- * Nano Banana has two modes:
+ * Nano Banana has three modes:
  * - Standard (2.5-flash): Basic generation with minimal controls
  * - Pro: Adds negative prompt, aspect ratio, and resolution options
+ * - V2 (nano-banana-2): Aspect ratio, resolution, web search toggle, and seed
  *
  * Note: No LoRA support, no samplers, CFG scale, steps, or CLIP skip.
  */
@@ -28,12 +29,13 @@ import {
 // =============================================================================
 
 /** Nano Banana mode type */
-export type NanoBananaMode = 'standard' | 'pro';
+export type NanoBananaMode = 'standard' | 'pro' | 'v2';
 
 /** Nano Banana mode version IDs */
 const nanoBananaVersionIds = {
   standard: 2154472,
   pro: 2436219,
+  v2: 2725610,
 } as const;
 
 /** Map from version ID to mode name */
@@ -45,6 +47,7 @@ const versionIdToMode = new Map<number, NanoBananaMode>(
 const nanoBananaModeVersionOptions = [
   { label: 'Standard', value: nanoBananaVersionIds.standard },
   { label: 'Pro', value: nanoBananaVersionIds.pro },
+  { label: 'V2', value: nanoBananaVersionIds.v2 },
 ];
 
 // =============================================================================
@@ -95,6 +98,24 @@ const proModeGraph = new DataGraph<NanoBananaModeCtx, GenerationCtx>()
   })
   .node('seed', seedNode());
 
+/** V2 mode subgraph: aspectRatio, resolution, enableWebSearch, seed */
+const v2ModeGraph = new DataGraph<NanoBananaModeCtx, GenerationCtx>()
+  .node('aspectRatio', aspectRatioNode({ options: nanoBananaProAspectRatios, defaultValue: '1:1' }))
+  .node('resolution', {
+    input: z.enum(resolutionOptions).optional(),
+    output: z.enum(resolutionOptions),
+    defaultValue: '1K',
+    meta: {
+      options: resolutionOptions.map((r) => ({ label: r, value: r })),
+    },
+  })
+  .node('enableWebSearch', {
+    input: z.boolean().optional(),
+    output: z.boolean(),
+    defaultValue: false,
+  })
+  .node('seed', seedNode());
+
 // =============================================================================
 // Nano Banana Graph V2
 // =============================================================================
@@ -106,6 +127,7 @@ const proModeGraph = new DataGraph<NanoBananaModeCtx, GenerationCtx>()
  * Uses discriminatedUnion on 'nanoBananaMode' computed from model.id:
  * - standard: seed only
  * - pro: negativePrompt, aspectRatio, resolution, seed
+ * - v2: aspectRatio, resolution, enableWebSearch, seed
  */
 export const nanoBananaGraph = new DataGraph<
   { ecosystem: string; workflow: string; model: ResourceData },
@@ -146,6 +168,7 @@ export const nanoBananaGraph = new DataGraph<
   .discriminator('nanoBananaMode', {
     standard: standardModeGraph,
     pro: proModeGraph,
+    v2: v2ModeGraph,
   });
 
 // Export mode options for use in components
