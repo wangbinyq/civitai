@@ -237,8 +237,55 @@ export const AdvancedSettings = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRun.params.engine, selectedRun.id]);
 
+  // Apply feature-flag-driven default engine on mount / run change.
+  // The store's defaultRun always uses 'kohya' because it can't access feature flags,
+  // so we correct it here when aiToolkitDefaultSd is enabled for sd15/sdxl.
+  useEffect(() => {
+    if (!features.aiToolkitDefaultSd) return;
+    if (selectedRun.baseType !== 'sd15' && selectedRun.baseType !== 'sdxl') return;
+    if (selectedRun.params.engine !== 'kohya') return;
+
+    const defaultParams = getDefaultTrainingParams(runBase, 'ai-toolkit');
+    defaultParams.engine = 'ai-toolkit' as typeof selectedRun.params.engine;
+    const repeatsTarget = selectedRun.baseType === 'sd15' ? 400 : 200;
+    defaultParams.numRepeats = Math.max(
+      1,
+      Math.min(5000, Math.ceil(repeatsTarget / (numImages || 1)))
+    );
+    defaultParams.targetSteps = Math.ceil(
+      ((numImages || 1) * defaultParams.numRepeats * defaultParams.maxTrainEpochs) /
+        defaultParams.trainBatchSize
+    );
+
+    doUpdate({ params: defaultParams });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRun.id, features.aiToolkitDefaultSd]);
+
+  const engineLabel =
+    selectedRun.params.engine === 'ai-toolkit'
+      ? 'AI Toolkit'
+      : selectedRun.params.engine === 'rapid'
+      ? 'Rapid'
+      : selectedRun.params.engine === 'kohya'
+      ? 'Kohya'
+      : selectedRun.params.engine;
+
   return (
     <>
+      {/* Active engine indicator */}
+      <Group mt="md" gap="xs">
+        <Text size="sm" fw={500}>
+          Engine:
+        </Text>
+        <Badge
+          size="sm"
+          color={selectedRun.params.engine === 'ai-toolkit' ? 'blue' : 'gray'}
+          variant="light"
+        >
+          {engineLabel}
+        </Badge>
+      </Group>
+
       {/* Flux1 can toggle Rapid Training on/off */}
       {selectedRun.baseType === 'flux' && (
         <Group mt="md">
@@ -590,6 +637,10 @@ export const AdvancedSettings = ({
 
                     if (ts.name === 'optimizerType' && isVideo) {
                       options = options.filter((o) => o !== 'Prodigy');
+                    }
+
+                    if (ts.name === 'optimizerType' && selectedRun.params.engine !== 'ai-toolkit') {
+                      options = options.filter((o) => o !== 'Automagic');
                     }
 
                     if (ts.name === 'engine') {

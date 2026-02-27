@@ -411,6 +411,8 @@ export const isAiToolkitEnabled = (
   features: Record<string, boolean>
 ): boolean => {
   if (isAiToolkitMandatory(baseType)) return true;
+  // When aiToolkitDefaultSd is on, AI Toolkit is enabled (and default) for sd15/sdxl
+  if ((baseType === 'sd15' || baseType === 'sdxl') && features.aiToolkitDefaultSd) return true;
   const flagKey = aiToolkitFlagByBaseType[baseType];
   return flagKey ? !!features[flagKey] : false;
 };
@@ -441,9 +443,11 @@ export const isAiToolkitMandatory = (baseType: TrainingBaseModelType): boolean =
 };
 
 // Get default engine for base type
+// Pass features to enable feature-flag-driven defaults (e.g. aiToolkitDefaultSd)
 export const getDefaultEngine = (
   baseType: TrainingBaseModelType,
-  baseModel?: string
+  baseModel?: string,
+  features?: Record<string, boolean>
 ): EngineTypes => {
   if (baseType === 'qwen') return 'ai-toolkit'; // Qwen requires AI Toolkit
   if (baseType === 'zimage') return 'ai-toolkit'; // ZImage (Turbo/Base) requires AI Toolkit
@@ -454,6 +458,10 @@ export const getDefaultEngine = (
   if (baseType === 'flux2') {
     if (baseModel === 'flux2_dev_edit') return 'flux2-dev-edit';
     return 'flux2-dev'; // Default for flux2_dev
+  }
+  // When flag is on, default sd15/sdxl to ai-toolkit
+  if ((baseType === 'sd15' || baseType === 'sdxl') && features?.aiToolkitDefaultSd) {
+    return 'ai-toolkit';
   }
   return 'kohya';
 };
