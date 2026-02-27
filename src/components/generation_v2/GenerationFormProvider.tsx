@@ -340,9 +340,10 @@ function InnerProvider({
 
         const values = {
           ...data.params,
-          model: split.model,
           resources: mergedResources,
-          vae: split.vae,
+          // Only include model/vae when present — otherwise we'd nullify the current value
+          ...(split.model && { model: split.model }),
+          ...(split.vae && { vae: split.vae }),
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose superset of discriminated union
         graph.set(values as any);

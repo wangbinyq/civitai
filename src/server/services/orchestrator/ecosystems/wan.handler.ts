@@ -101,6 +101,7 @@ export const createWanInput = defineHandler<WanCtx, WanInput>((data, ctx) => {
     quantity: data.quantity ?? 1,
     seed: data.seed,
     loras: loras.length > 0 ? loras : undefined,
+    frameRate: 24,
   };
 
   // Version-specific handling
@@ -108,6 +109,7 @@ export const createWanInput = defineHandler<WanCtx, WanInput>((data, ctx) => {
     case 'v2.1': {
       return removeEmpty({
         ...baseInput,
+        resolution: data.resolution,
         aspectRatio: (hasImages
           ? getImageAspectRatio(data.images, v21AspectRatios)
           : data.aspectRatio?.value) as Wan21FalVideoGenInput['aspectRatio'],

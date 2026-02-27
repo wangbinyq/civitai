@@ -346,7 +346,7 @@ export function FormFooter({ onSubmitSuccess }: { onSubmitSuccess?: () => void }
     const snapshot = graph.getSnapshot() as ResourceSnapshot & {
       workflow?: string;
       images?: Array<{ url: string }>;
-      video?: string;
+      video?: {url: string};
     };
     const hasCreatorTip = getHasCreatorTip(snapshot);
 
@@ -359,7 +359,7 @@ export function FormFooter({ onSubmitSuccess }: { onSubmitSuccess?: () => void }
     if (isEnhancement) {
       // Get the image/video URL from the snapshot
       const imageUrl = snapshot.images?.[0]?.url;
-      const videoUrl = snapshot.video;
+      const videoUrl = snapshot.video?.url;
       const mediaUrl = imageUrl || videoUrl;
 
       if (mediaUrl) {
