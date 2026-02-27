@@ -245,7 +245,7 @@ export function GenerationForm() {
 
   return (
     <div className="flex size-full flex-1 flex-col">
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 p-2">
         <Stack gap="sm" className="w-full">
           {/* Workflow and ecosystem selectors - inline */}
           <Group gap="xs" wrap="nowrap" className="w-full justify-between">
