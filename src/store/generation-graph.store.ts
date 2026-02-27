@@ -22,7 +22,7 @@ import type { OrchestratorEngine2 } from '~/server/orchestrator/generation/gener
 import { useGenerationPanelStore } from '~/store/generation-panel.store';
 import { generationFormStore } from '~/store/generation-form.store';
 import { remixStore } from '~/store/remix.store';
-import { QS } from '~/utils/qs';
+import { trpcVanilla } from '~/utils/trpc';
 
 // =============================================================================
 // Types
@@ -138,11 +138,9 @@ export function fetchGenerationData(input: GetGenerationDataInput): Promise<Gene
   const cached = generationDataCache.get(key);
   if (cached) return cached;
 
-  const promise = fetch(`/api/generation/data?${QS.stringify({ ...input, withPreview: true })}`)
-    .then((res) => {
-      if (!res.ok) throw new Error(res.statusText);
-      return res.json() as Promise<GenerationData>;
-    })
+  const promise = trpcVanilla.generation.getGenerationData
+    .query({ ...input, withPreview: true })
+    .then((data) => data as GenerationData)
     .catch((err) => {
       generationDataCache.delete(key); // Allow retry on failure
       throw err;

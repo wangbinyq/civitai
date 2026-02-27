@@ -223,10 +223,10 @@ const wan21Graph = new DataGraph<WanVersionCtx, GenerationCtx>()
   .node('duration', enumNode({ options: wanDurations, defaultValue: 5 }))
   .node(
     'resources',
-    (ctx) =>
+    (ctx, ext) =>
       resourcesNode({
         ecosystem: ctx.ecosystem,
-        limit: 2, // Fal provider has 2 max resources
+        limit: ext.limits.maxResources, // Fal provider has 2 max resources
       }),
     ['ecosystem']
   )
