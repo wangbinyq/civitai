@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { usePrevious } from '@mantine/hooks';
 import { IconAlertTriangle, IconChevronDown, IconConfetti } from '@tabler/icons-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CivitaiTooltip } from '~/components/CivitaiWrapped/CivitaiTooltip';
 import { DescriptionTable } from '~/components/DescriptionTable/DescriptionTable';
 import { InfoPopover } from '~/components/InfoPopover/InfoPopover';
@@ -76,6 +76,9 @@ export const AdvancedSettings = ({
   );
   const previous = usePrevious(selectedRun);
   const [openedSections, setOpenedSections] = useState<string[]>([]);
+  // Track runs that have already had the flag-driven default applied,
+  // so switching back to a run the user manually changed won't re-override.
+  const appliedDefaultEngineRuns = useRef(new Set<number>());
 
   const doUpdate = (data: TrainingRunUpdate) => {
     updateRun(modelId, mediaType, selectedRun.id, data);
@@ -237,13 +240,18 @@ export const AdvancedSettings = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRun.params.engine, selectedRun.id]);
 
-  // Apply feature-flag-driven default engine on mount / run change.
+  // Apply feature-flag-driven default engine once per run.
   // The store's defaultRun always uses 'kohya' because it can't access feature flags,
   // so we correct it here when aiToolkitDefaultSd is enabled for sd15/sdxl.
+  // Only applies once per run ID — if the user toggles off AI Toolkit and switches
+  // between multi-train runs, their choice is preserved.
   useEffect(() => {
     if (!features.aiToolkitDefaultSd) return;
     if (selectedRun.baseType !== 'sd15' && selectedRun.baseType !== 'sdxl') return;
     if (selectedRun.params.engine !== 'kohya') return;
+    if (appliedDefaultEngineRuns.current.has(selectedRun.id)) return;
+
+    appliedDefaultEngineRuns.current.add(selectedRun.id);
 
     const defaultParams = getDefaultTrainingParams(runBase, 'ai-toolkit');
     defaultParams.engine = 'ai-toolkit' as typeof selectedRun.params.engine;
