@@ -39,9 +39,9 @@ This document covers the provisioning job only. The user-facing import flow, the
 **Not in scope (separate work):**
 
 - The audit pipeline itself (`auditPromptEnriched` → `WildcardSetCategory.auditStatus` flips). This job *enqueues* audit but doesn't implement it. The audit-consumer side is described in [prompt-snippets-schema.md](./prompt-snippets-schema.md) §6.3.
-- The user-import flow / `UserWildcardSet` pointer creation (described in [prompt-snippets-schema.md](./prompt-snippets-schema.md) §6.1, simplified).
+- The user-facing "create" flow on wildcard model pages — clicking "create" looks up the existing `WildcardSet.id` and adds it to the form's localStorage `wildcardSetIds`. No DB writes needed on the user path once provisioning has run; see [prompt-snippets-schema.md](./prompt-snippets-schema.md) §6.1.
 - Picker UI, resolver, generation form integration.
-- Schema migrations — the `WildcardSet`, `WildcardSetCategory`, and `UserWildcardSet` tables must already exist (see schema doc §8 for the migration). This job assumes the schema is in place.
+- Schema migrations — the `WildcardSet` and `WildcardSetCategory` tables must already exist (see schema doc §8 for the migration). This job assumes the schema is in place.
 
 ## 3. Architecture
 
@@ -240,7 +240,7 @@ This job's responsibility ends at "row created + audit enqueued." The audit pipe
 
 Until audit completes, the `WildcardSet` exists but its categories are `auditStatus: Pending`. The resolver excludes Pending categories from generation pools (only `Clean` ones contribute), so the set effectively can't be used yet.
 
-If the audit pipeline isn't yet built when this job ships, the rows will sit at Pending until it does. That's acceptable — the user-import flow can still create `UserWildcardSet` pointers, but the picker will show "this set is still being processed" until the audit lands.
+If the audit pipeline isn't yet built when this job ships, the rows will sit at Pending until it does. That's acceptable — the user can still load the set into their form's localStorage `wildcardSetIds` via the "create" button on the model page, but the picker will show "this set is still being processed" until the audit lands.
 
 **Contract from this job to the audit job:**
 - This job calls `enqueueAuditJob({ wildcardSetId })` after committing.
@@ -284,7 +284,7 @@ If the audit pipeline isn't yet built when this job ships, the rows will sit at 
 
 In order:
 
-- [ ] **Pre-req:** confirm the schema migration ([prompt-snippets-schema.md](./prompt-snippets-schema.md) §8) has shipped — `WildcardSet`, `WildcardSetCategory`, `UserWildcardSet` tables + enums + CHECK constraint exist.
+- [ ] **Pre-req:** confirm the schema migration ([prompt-snippets-schema.md](./prompt-snippets-schema.md) §8) has shipped — `WildcardSet`, `WildcardSetCategory` tables + enums + CHECK constraint exist.
 - [ ] **Pre-req:** confirm an audit-job target exists (or stub one that no-ops; the audit pipeline itself can ship after this job).
 - [ ] Implement `extractWildcardZip(url)` helper — downloads zip from S3/CloudFront, extracts in memory, returns `{ filename, lines: string[] }[]`. Reuse existing zip-extraction utilities if any exist.
 - [ ] Implement `normalizeNestedRefs(line)` — single regex rewrite.
@@ -327,4 +327,4 @@ For grounding the implementation work — these are likely paths based on a typi
 - Reconciliation cron runs on schedule and is observable (success counts, failure alerts).
 - Backfill script ran successfully against prod; counts verified.
 - Tests passing; failure paths validated.
-- The user-import flow (separate work) can rely on `WildcardSet` rows existing for any published wildcard model.
+- The "create" button on wildcard model pages (separate work) can rely on `WildcardSet` rows existing for any published wildcard model and just look up the ID without falling back to a runtime first-import.

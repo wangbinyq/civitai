@@ -4,17 +4,17 @@ A unified library of reusable prompt content for the image generator. Users refe
 
 ## Status
 
-Planning. Not yet implemented.
+Planning. Not yet implemented. **For the trimmed v1 scope** (what actually ships first vs what's deferred), see [prompt-snippets-v1.md](./prompt-snippets-v1.md). This doc is the full long-term design — items not in v1 are flagged inline as "post-v1."
 
 ---
 
 ## Key concepts
 
 - **WildcardSet** — the unified content table. Every set has a `kind`:
-  - **System-kind:** content imported from a wildcard-type model. Globally cached, shared across all users who subscribe.
-  - **User-kind:** owned by one user. Their personal collection, e.g. the default "My snippets" set.
-- **WildcardSetCategory** — categories within a set (e.g. `character`, `setting`). Each category holds a Postgres `text[]` of plain string values. Values can be plain text, use Dynamic Prompts alternation/weight syntax (`{a|b}`, `{1-2$$a|b}`, `N.0::name`), or contain nested `#name` references to other categories within the same set. For User-kind sets the array is mutable (add, edit, reorder, remove); for System-kind sets it's immutable from the source zip.
-- **UserWildcardSet** — per-user library pointer. Records that a user has access to a wildcard set. Used for both kinds: subscription pointer for System-kind, auto-created owner pointer for User-kind. There is no DB-level "active" flag — which sets are active for a given submission is captured in the form state (localStorage on the client) and snapshotted as `wildcardSetIds` in workflow metadata.
+  - **System-kind:** content imported from a wildcard-type model. Globally cached, shared across all users who load it.
+  - **User-kind:** owned by one user. Their personal collection, e.g. the default "My snippets" set. Always implicitly loaded by the user's own form on mount.
+- **WildcardSetCategory** — categories within a set (e.g. `character`, `setting`). Each category holds a Postgres `text[]` of plain string values. Values can be plain text, use Dynamic Prompts alternation/weight syntax (`{a|b}`, `{1-2$$a|b}`, `N.0::name`), or — post-v1 — contain nested `#name` references to other categories within the same set. For User-kind sets the array is mutable (add, edit, reorder, remove); for System-kind sets it's immutable from the source zip.
+- **No DB join table for "loaded sets."** The user's User-kind set is always implicitly loaded; additional System-kind sets are loaded by clicking a "create" button on a wildcard model page. The list of loaded set IDs lives in the form's localStorage, and is snapshotted as `wildcardSetIds` into workflow metadata at submit time. Server-side authorization is implicit by `kind`: System-kind sets are public; User-kind set IDs must match `ownerUserId == submitter`.
 - **Reference syntax:** `#category` is the only reference syntax. Whether the submission expands as a batch (cartesian fan-out) or random sampling (independent picks per step) is a form-level mode toggle, not a per-reference syntax.
 
 For Prisma definitions, queries, indexes, and migration plan, see [prompt-snippets-schema.md](./prompt-snippets-schema.md). For a populated walkthrough using real wildcard-model content, see [prompt-snippets-schema-examples.md](./prompt-snippets-schema-examples.md).
@@ -30,8 +30,8 @@ For Prisma definitions, queries, indexes, and migration plan, see [prompt-snippe
 - **Combination cap:** 10 per submission. Over-cap fan-out is randomly sampled with a seeded PRNG; user can reroll.
 - **No-repeat rule.** When a category appears multiple times in one prompt, no single combination reuses the same value across slots.
 - **Syntax:** `#category` is the single reference syntax. Server resolves these against the user's active sets; unmatched `#tokens` pass through to the existing textual-inversion parser.
-- **Mode is per-submission, not per-reference.** The form has a `snippetMode` toggle (`batch` | `random`) that governs how the submission expands. Batch mode runs unique cartesian-product combinations across selections; random mode runs independent random samples per step.
-- **`batchCount` is user-configurable.** Number of workflow steps to fan out into. In batch mode it caps the cartesian product (sample with seeded PRNG when over-available); in random mode it's the number of independent draws.
+- **Mode is per-submission, not per-reference.** The form has a `snippetMode` toggle (`batch` | `random`) that governs how the submission expands. Batch mode runs unique cartesian-product combinations across selections; random mode runs independent random samples per step. **Default: `random`** (single random draw per step is the most common case).
+- **`batchCount` is user-configurable.** Number of workflow steps to fan out into. In batch mode it caps the cartesian product (sample with seeded PRNG when over-available); in random mode it's the number of independent draws. **Default: `1`** (single step, no fan-out).
 - **Determinism:** the existing generation-form `seed` drives all snippet randomness (cap sampling and random-mode picks). Same seed + same payload = byte-identical expanded prompts.
 - **Submission audit:** snippet content is pre-audited at category creation. The user's literal template text (outside any `#reference`) is audited at submission. Composed prompt goes to external moderation as part of the normal submission flow.
 
@@ -43,9 +43,8 @@ See [prompt-snippets-schema.md](./prompt-snippets-schema.md) for full Prisma def
 
 - `WildcardSet` — `kind: System | User` discriminator. System-kind has `modelVersionId`, `modelName`, `versionName`. User-kind has `ownerUserId`, `name`. Audit aggregate, invalidation flags, denormalized `totalValueCount`.
 - `WildcardSetCategory` — `name CITEXT`, `values text[]`, per-category `auditStatus`, `nsfwLevel` (bitwise int), `valueCount`.
-- `UserWildcardSet` — `(userId, wildcardSetId)`. Library pointer for both kinds. No activation flag — see [prompt-snippets-schema.md](./prompt-snippets-schema.md) §4.3.
 
-There is no separate `PromptSnippet` table. User personal content is a User-kind `WildcardSet` whose categories live in the same table as System-kind imported content.
+Two new tables — no DB join table for "loaded sets." There is no separate `PromptSnippet` table either. User personal content is a User-kind `WildcardSet` whose categories live in the same table as System-kind imported content.
 
 ---
 
@@ -66,9 +65,7 @@ const snippetReferencePattern = /#([a-zA-Z][a-zA-Z0-9_]*)/g;
 
 **Slot-counting:** `"#character fights #character"` contains two batch slots for `character`. The no-repeat rule ensures the two slots within a single combination hold different values.
 
-**Nested resolution:** values within a category may contain `#name` references to other categories. These resolve at generation time within the source set's scope (System-kind nested refs stay inside the same WildcardSet; User-kind nested refs stay inside the same User-kind set). Recursion is bounded with a hard depth limit and cycle detection. See [prompt-snippets-nested-resolution.md](./prompt-snippets-nested-resolution.md) for the full algorithm.
-
-**Import-time normalization:** wildcard model files written for A1111 / Dynamic Prompts use `__name__` for nested references. At import we rewrite every `__name__` token to `#name` so the stored values, the resolver, and the user-facing UI all use a single reference syntax. Alternation/weight syntax (`{a|b}`, `N.0::name`, `{1-2$$...}`) is preserved literally.
+**Nested resolution (post-v1):** values within a category may contain `#name` (or, for source-file compatibility, `__name__`) references to other categories. v1 does *not* expand these — top-level `#category` resolution happens, but tokens inside a category value are passed through literally. The future iteration that lands nested resolution will accept both `#name` and `__name__` interchangeably. See [prompt-snippets-nested-resolution.md](./prompt-snippets-nested-resolution.md) for the full algorithm (when it ships).
 
 ---
 
@@ -85,11 +82,11 @@ A library section in the user account (or a modal accessible from the generator)
 
 ### Wildcard model browsing — System content discovery
 
-A new "Wildcards" tab in the resources picker (alongside LoRAs, embeddings):
+The wildcard model page (existing model detail surface, filtered to `modelType: Wildcard`) gets a **"create"** button on the version row:
 
-- Browse Civitai wildcard-type models.
-- Click "Add to my library" → creates a System-kind `WildcardSet` (extracts and caches content if not already cached) + a `UserWildcardSet` activation pointer for the user.
-- Subsequent users adding the same model version get only a pointer (content is shared globally — see schema doc §6.1).
+- Click "create" → ensures a System-kind `WildcardSet` exists for that `ModelVersion` (extracts and caches content on first import; no-op if already cached) and returns the `WildcardSet.id`. The form's localStorage adds the ID to its `wildcardSetIds` list so the set is immediately loaded into the generator.
+- Subsequent users clicking "create" on the same model version get the existing set ID — no DB rows written, content is shared globally (see schema doc §6.1).
+- v1 deliberately avoids a separate "library" picker tab in the resources strip — discovery happens by browsing wildcard model pages, the same surface as any other model type.
 
 ### Prompt input integration
 
@@ -102,14 +99,19 @@ Wrap the existing [InputPrompt.tsx](../../src/components/Generate/Input/InputPro
 
 ### Per-reference picker panel
 
-Below the prompt input, a `SnippetReferencePanel` component:
+Below the prompt input, a `SnippetReferencePanel` component.
 
-- Lists each unique `#category` reference found in the prompt.
-- A mode toggle (Batch | Random) sets `snippetMode` for the submission. A number input sets `batchCount`.
-- For each reference: shows the merged pool of values across active sets, grouped by source (e.g. "From My Snippets," "From fullFeatureFantasy v3.0"). **No values selected = full pool used by default.** Users opt into narrower selections explicitly via per-source filter pills + per-row checkboxes.
+**v1 behavior (ships first).** The picker shows the count of available values per reference and provides the mode toggle (Batch | Random) + `batchCount` input + Preview button. **Every `#reference` defaults to the full clean pool from `wildcardSetIds`** — there is no per-value picker UI in v1. If the user wants a narrower pool they can either narrow which sets they have loaded (toggle off a System-kind set on its model page) or, for explicit excludes, use the `ex` field via the Preview/inspect surface (TBD design).
+
+**Post-v1 (the V8 desktop / R2 mobile design).** Lists each unique `#category` reference found in the prompt with full picker affordances:
+
+- For each reference: shows the merged pool of values across loaded sets, grouped by source (e.g. "From My Snippets," "From fullFeatureFantasy v3.0"). **No values selected = full pool used by default.** Users opt into narrower selections explicitly via per-source filter pills + per-row checkboxes.
+- Selections are recorded as `in` (explicit includes) and `ex` (explicit excludes) per source category. When both are empty for every selection on a reference, the reference defaults to the full clean pool.
 - Search box per reference (filter values across sources within one category — handles large libraries).
 - Per-row `⋯` menu for affordances like "Save to my snippets" (copies a value from a System-kind set into the user's User-kind set as a new category).
 - Footer: combinations counter ("24 combinations → running 10, sampled by seed 847291"), reroll button when sampling is active, validation errors when slot count exceeds picked values.
+
+**Preview button (v1).** Both v1 and post-v1 surface a Preview action that returns a single resolved-prompt sample. Clicking Preview generates an ephemeral `seed` value sent on the `snippets` payload (`snippets.seed`); the seed is **only** used for the preview rendering and is **not persisted** to workflow metadata. The form's existing top-level `seed` is the source of truth for actual generation.
 
 ### Form submission gate
 
@@ -142,17 +144,25 @@ Extend the `generateFromGraph` call ([generationRequestHooks.ts:216-237](../../s
 ```ts
 type SnippetReference = {
   category: string;
-  // empty selections array = "use full pool" (default behavior, scoped to wildcardSetIds)
-  // value text is the stable identifier — survives reorder, breaks only on edit/delete
-  selections: { categoryId: number; values: string[] }[];
+  // empty selections array = "use full pool" (default behavior, scoped to wildcardSetIds).
+  // value text is the stable identifier — survives reorder, breaks only on edit/delete.
+  selections: {
+    categoryId: number;
+    in: string[];   // explicit includes (empty when only excludes are used)
+    ex: string[];   // explicit excludes (empty when only includes are used)
+  }[];
 };
 
 // New node inside the generation-graph. Lives next to the existing prompt/negativePrompt/
 // resources/sampler/etc. nodes. Form serializes it into `input` along with all other graph nodes.
 type SnippetsNode = {
-  wildcardSetIds: number[];   // UserWildcardSet pointer IDs active at submit time
-  mode: 'batch' | 'random';   // submission-level toggle
-  batchCount: number;         // workflow steps to fan out into
+  wildcardSetIds: number[];        // WildcardSet IDs loaded at submit time
+                                   // (always includes the user's User-kind set + any System-kind sets they've loaded)
+  mode?: 'batch' | 'random';       // optional; defaults to 'random'
+  batchCount?: number;             // optional; defaults to 1
+  seed?: number;                   // PREVIEW ONLY — sent when the user hits Preview, not persisted
+                                   // to workflow metadata. The form's top-level `seed` is the
+                                   // source of truth for actual generation.
   targets: Record<string, SnippetReference[]>;
   // Conventional target keys for v1: 'prompt', 'negativePrompt'. Each value is a
   // SnippetReference[] (no wrapper object). Empty target = [].
@@ -228,7 +238,7 @@ The `snippets` object lives as a dedicated node in the generation graph that `Ge
 
 1. **Editor nodes have a dependency on the snippets node.** Each editor node (prompt, negativePrompt, and any future targets) reads `snippets.targets[<ownNodeName>]` to render its Tiptap chips with their current selection state. When the snippets node updates (a chip is tapped, mode flips, a set is added), the dependent editor nodes re-render.
 
-2. **Auto-prune on access loss.** When the form mounts (or after a preset/remix load), the form fetches `getOwnedWildcardSets({ ids: snippets.wildcardSetIds })`. The server returns only the IDs the user still owns. Any IDs missing from the response are silently pruned from the snippets node's `wildcardSetIds`, plus any selections referencing categories from those sets (across every target). The user starts with a clean, valid state; no errors at submit time from stale references.
+2. **Auto-prune on access loss.** When the form mounts (or after a preset/remix load), the form fetches `getWildcardSets({ ids: snippets.wildcardSetIds })`. The server returns only the IDs the user is authorized for (System-kind = public, User-kind = `ownerUserId == requester`) and that haven't been invalidated. Any IDs missing from the response are silently pruned from the snippets node's `wildcardSetIds`, plus any selections referencing categories from those sets (across every target). The user starts with a clean, valid state; no errors at submit time from stale references.
 
 3. **Red-badge state for orphaned references.** A `#category` chip in any editor is "orphaned" when it references a category that no longer resolves against any active set (the user removed the source set, the set was invalidated, or the category itself is Dirty). The Tiptap chip renders with a red badge in this case to flag "no corresponding snippet to use." The user can either re-add the source set (if they removed it) or delete the reference from the editor. Submit is blocked while any orphaned chips exist in any target.
 
@@ -262,15 +272,15 @@ Background cron job re-audits affected categories when audit rule version bumps.
 
 ## Preset interaction
 
-Presets snapshot the user's active sets at save time. `GenerationPreset.values` gains:
+Presets snapshot the user's loaded sets at save time. `GenerationPreset.values` gains:
 
-- `wildcardSetIds: number[]` — list of `UserWildcardSet.id`s that were active when the preset was saved.
+- `wildcardSetIds: number[]` — list of `WildcardSet.id`s that were loaded when the preset was saved (always includes the user's User-kind set + any System-kind sets they had loaded).
 - `prompt` continues to save with `#references` as literal text.
 
 On load:
 
 - The form's `wildcardSetIds` (in localStorage) is hydrated from the preset's snapshot. No DB rows are touched.
-- If any IDs in the snapshot no longer exist, the preset load surfaces a warning and offers a "re-add these sets" shortcut for missing System-kind sets.
+- The form fetches `getWildcardSets({ ids })` to validate authorization and resolve display info; any IDs the user is no longer authorized for (e.g., a User-kind set was deleted, or a System-kind set was invalidated) are silently dropped and surfaced as a warning chip.
 - For each `#reference` in the loaded prompt, the picker panel populates per-reference selection state. Defaults to "all selected" (full pool); user adjusts.
 
 Future cross-user preset sharing: cross-user `#references` will be unresolved on the receiver's side. Acceptable — receiver fills with their own content.
@@ -283,7 +293,7 @@ Each phase is independently shippable. Backend phases ship before any client UI 
 
 ### Phase 1 — schema + tRPC scaffolding (backend only)
 
-- Prisma migration: `WildcardSet`, `WildcardSetCategory`, `UserWildcardSet` + 3 enums + CHECK constraint
+- Prisma migration: `WildcardSet`, `WildcardSetCategory` + 3 enums + CHECK constraint
 - `wildcardSet` tRPC router (read endpoints + import for System-kind)
 - Audit pipeline for categories (background job runner, creation-time hook)
 
@@ -291,13 +301,11 @@ No user-visible features. Validates the data model end-to-end via API testing.
 
 ### Phase 2 — System-kind import flow
 
-- Wildcard-type model browsing (resources picker tab in `GenerationForm`)
-- "Add to library" creates `WildcardSet` (with first-import extraction + audit) + a `UserWildcardSet` library pointer
-- Extend `getResourceData` to recognize `Wildcard` model type and return the corresponding `WildcardSet.id` so the form's snippet-selection node can add it to its `wildcardSetIds` immediately (auto-active in the current generation context)
-- User can browse their imported sets in a library page
-- `getOwnedWildcardSets({ ids })` tRPC query for hydrating form state on mount/preset-load/remix
+- "Create" button on wildcard model version pages (existing model detail surface, filtered to `modelType: Wildcard`)
+- Click "create" runs first-import extraction + audit if needed and returns the `WildcardSet.id`; the form's localStorage adds the ID to its `wildcardSetIds` immediately
+- `getWildcardSets({ ids })` tRPC query for hydrating form state on mount/preset-load/remix (server returns only sets the user is authorized for: System-kind = public, User-kind = `ownerUserId == requester`)
 
-Users can subscribe to wildcard models but don't yet see them in the prompt UI.
+Users can load wildcard models into the generator but don't yet see them in the prompt UI.
 
 ### Phase 3 — User-kind set + snippet save
 
@@ -332,9 +340,9 @@ Pickers show in UI; selections aren't sent yet.
 
 First end-to-end working slice.
 
-### Phase 7 — nested wildcard resolution
+### Phase 7 — nested wildcard resolution (post-v1)
 
-- Recursive `#name` expansion within source-set scope (max depth + cycle detection)
+- Recursive `#name` expansion within source-set scope (max depth + cycle detection); the resolver also accepts the source-file form `__name__` interchangeably with `#name`
 - Transitive `Dirty` propagation: if a category references another `Dirty` category, mark this one `Dirty` too
 
 ### Phase 8 — system default wildcard set

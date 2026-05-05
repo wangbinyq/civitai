@@ -1,8 +1,12 @@
 # Prompt Snippets — Nested Wildcard Resolution (Walkthrough)
 
-**Status:** draft for review
+**Status:** **Post-v1 / future work.** Nested wildcard resolution is *deferred* from v1 — the v1 implementation expands only top-level `#category` references and leaves any `#name` (or `__name__`) tokens that appear *inside* a category's value text alone. This doc captures the design for the future iteration that lands nested resolution. See [prompt-snippets-v1.md](./prompt-snippets-v1.md) for what actually ships first.
+
+When nested resolution does land, the resolver will accept **both** `#name` (the normalized form used everywhere else in the system) and `__name__` (the source-file Dynamic Prompts form) inside category values, so authors of wildcard model files don't have to change their conventions.
+
 **Companion docs:**
 
+- [prompt-snippets-v1.md](./prompt-snippets-v1.md) (v1 scope — what actually ships)
 - [prompt-snippets.md](./prompt-snippets.md) (product/UX plan)
 - [prompt-snippets-schema.md](./prompt-snippets-schema.md) (schema spec)
 - [prompt-snippets-schema-examples.md](./prompt-snippets-schema-examples.md) (populated tables)
@@ -11,9 +15,9 @@ A walkthrough doc to make nested-wildcard resolution concrete. Uses a small inve
 
 ---
 
-## Syntax — one symbol everywhere
+## Syntax — both `#` and `__…__` accepted in nested values
 
-Our system uses **`#category`** as the only reference syntax, both in user-typed prompts and inside category values. Real wildcard model files (e.g., fullFeatureFantasy) use the older Dynamic Prompts convention `__name__` for nested references — we transform `__name__` → `#name` at import time. The stored `text[]` values, the resolver, and the user-facing UI all see `#` only.
+In **user-typed prompts**, our system uses **`#category`** as the only top-level reference syntax. Inside category values (the post-v1 nested-resolution layer) the resolver accepts **both** `#name` and the source-file Dynamic Prompts form `__name__`, treating them identically. This way authors of wildcard model files don't need to rewrite their packs to fit our convention; we meet them where they are.
 
 What's preserved literally on import:
 
@@ -21,12 +25,9 @@ What's preserved literally on import:
 - Weighted alternation: `{3.0::a|2.5::b|...}`
 - Multi-pick: `{1-2$$a|b|c}`
 - SD attention syntax: `(weight:1.2)`
+- Nested references in *both* forms: `__some_name__` and `#some_name` are stored as-is
 
-What's transformed on import:
-
-- `__some_name__` → `#some_name` (every nested reference)
-
-The semantics are unchanged; only the reference syntax is normalized.
+The resolver normalizes the two forms into a single token type at expansion time.
 
 ---
 
