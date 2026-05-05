@@ -254,33 +254,41 @@ Existing JSON blobs gain new conventional keys. **No per-step snippet metadata**
 ```jsonc
 {
   // workflow.metadata
-  "snippets": {
-    "wildcardSetIds": [490, 491],          // UserWildcardSet pointer IDs at submit time
-    "mode": "batch",                       // "batch" | "random" — submission-level toggle
-    "batchCount": 10,                      // how many workflow steps to fan out into
-    "targets": {
-      "prompt": [
-        {
-          "category": "character",
-          "selections": [
-            { "categoryId": 700, "values": ["blonde hair, green tunic, pointed ears...", "young man, green hat..."] },
-            { "categoryId": 401, "values": ["#hero"] }
-          ]
-        },
-        {
-          "category": "setting",
-          "selections": []                 // empty array = "default to full pool"
-        }
-      ],
-      "negativePrompt": [
-        { "category": "bad_anatomy", "selections": [] }
-      ]
-      // future: "musicDescription": [...] — no schema change required
+  "params": {
+    "prompt": "A #character ...",          // existing — graph form data lives under params
+    "negativePrompt": "...",               // existing
+    "seed": 847291,                        // existing
+    /* ... other graph form fields ... */
+    "snippets": {
+      "wildcardSetIds": [490, 491],        // UserWildcardSet pointer IDs at submit time
+      "mode": "batch",                     // "batch" | "random" — submission-level toggle
+      "batchCount": 10,                    // how many workflow steps to fan out into
+      "targets": {
+        "prompt": [
+          {
+            "category": "character",
+            "selections": [
+              { "categoryId": 700, "values": ["blonde hair, green tunic, pointed ears...", "young man, green hat..."] },
+              { "categoryId": 401, "values": ["#hero"] }
+            ]
+          },
+          {
+            "category": "setting",
+            "selections": []               // empty array = "default to full pool"
+          }
+        ],
+        "negativePrompt": [
+          { "category": "bad_anatomy", "selections": [] }
+        ]
+        // future: "musicDescription": [...] — no schema change required
+      }
     }
   },
   "tags": [..., "wildcards"]
 }
 ```
+
+`snippets` lives under `workflow.metadata.params` because all graph-form data (except resources) is persisted there — same place as `prompt`, `negativePrompt`, `seed`, etc. The `tags` array stays at the top of `workflow.metadata` since it's workflow-level metadata, not graph form data.
 
 Top-level fields under `snippets`:
 

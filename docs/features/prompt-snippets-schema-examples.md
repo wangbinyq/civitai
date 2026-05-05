@@ -315,61 +315,71 @@ Cartesian: `3 × 1 × 1 × 1 × 16 = 48 combinations` → over the 10-cap → se
 
 ### Submission payload (client → server)
 
-Alice has nothing in her negative prompt for this submission, so `negativePrompt` is an empty array:
+Alice has nothing in her negative prompt for this submission, so `negativePrompt` is an empty array. The `snippets` data is a node inside the generation-graph (carried by `input` alongside prompt, negativePrompt, resources, etc.), not a sibling of `input`:
 
 ```jsonc
 {
-  "promptDoc": { /* Tiptap doc JSON */ },
-  "promptTemplate": "A #character wearing armor, wielding #weapons_melee, with #expressions expression in #weather_time weather, featuring #elemental_types magic — dramatic composition, 8k",
-  "negativePromptTemplate": "low quality, blurry",
-  "snippets": {
-    "wildcardSetIds": [490, 491],
-    "mode": "batch",
-    "batchCount": 10,
-    "targets": {
-      "prompt": [
-        { "category": "character",        "selections": [] },
-        { "category": "weapons_melee",    "selections": [] },
-        { "category": "expressions",      "selections": [] },
-        { "category": "weather_time",     "selections": [] },
-        { "category": "elemental_types",  "selections": [] }
-      ],
-      "negativePrompt": []
+  "input": {
+    "seed": 847291,
+    "quantity": 4,
+    "prompt": "A #character wearing armor, wielding #weapons_melee, with #expressions expression in #weather_time weather, featuring #elemental_types magic — dramatic composition, 8k",
+    "negativePrompt": "low quality, blurry",
+    /* ... other graph nodes (resources, sampler, etc.) ... */
+    "snippets": {
+      "wildcardSetIds": [490, 491],
+      "mode": "batch",
+      "batchCount": 10,
+      "targets": {
+        "prompt": [
+          { "category": "character",        "selections": [] },
+          { "category": "weapons_melee",    "selections": [] },
+          { "category": "expressions",      "selections": [] },
+          { "category": "weather_time",     "selections": [] },
+          { "category": "elemental_types",  "selections": [] }
+        ],
+        "negativePrompt": []
+      }
     }
   },
-  "input": { "seed": 847291, "quantity": 4 /* ... other graph params */ }
+  /* ... existing top-level fields like civitaiTip, tags, remixOfId, buzzType ... */
 }
 ```
 
-`selections: []` means "use full pool" — the default. On the client, this `snippets` object is the serialized form of a dedicated node in the generation graph; each editor node (prompt, negativePrompt) has a dependency on the snippets node and re-renders its chips by reading `snippets.targets[<ownNodeName>]`.
+`selections: []` means "use full pool" — the default. On the client, the `snippets` object is the serialized form of a dedicated node in the generation-graph; each editor node (prompt, negativePrompt) has a dependency on the snippets node and re-renders its chips by reading `input.snippets.targets[<ownNodeName>]`.
 
 ### Workflow metadata (one record for the whole batch)
 
 ```jsonc
 {
   // workflow.metadata
-  "snippets": {
-    "wildcardSetIds": [490, 491],          // Alice's User-kind set + fullFeatureFantasy subscription
-    "mode": "batch",
-    "batchCount": 10,
-    "targets": {
-      "prompt": [
-        { "category": "character",       "selections": [] },   // [] = full pool default
-        { "category": "weapons_melee",   "selections": [] },
-        { "category": "expressions",     "selections": [] },
-        { "category": "weather_time",    "selections": [] },
-        { "category": "elemental_types", "selections": [] }
-      ],
-      "negativePrompt": []
+  "params": {
+    "prompt": "A #character wearing armor, ...",     // existing — graph form data
+    "negativePrompt": "low quality, blurry",         // existing
+    "seed": 847291,                                  // existing
+    /* ... other graph form fields ... */
+    "snippets": {
+      "wildcardSetIds": [490, 491],                  // Alice's User-kind set + fullFeatureFantasy subscription
+      "mode": "batch",
+      "batchCount": 10,
+      "targets": {
+        "prompt": [
+          { "category": "character",       "selections": [] },   // [] = full pool default
+          { "category": "weapons_melee",   "selections": [] },
+          { "category": "expressions",     "selections": [] },
+          { "category": "weather_time",    "selections": [] },
+          { "category": "elemental_types", "selections": [] }
+        ],
+        "negativePrompt": []
+      }
     }
   },
   "tags": [..., "wildcards"]              // workflow.tags gets the 'wildcards' marker
 }
 ```
 
-`wildcardSetIds` snapshots which sets contributed to the default pools. Without it, re-resolving this submission later would consult Alice's *current* active sets, which may have changed.
+`snippets` lives at `workflow.metadata.params.snippets` — same place as the prompt, negativePrompt, seed, and other graph form data. `wildcardSetIds` snapshots which sets contributed to the default pools. Without it, re-resolving this submission later would consult Alice's *current* active sets, which may have changed.
 
-In batch mode, the cartesian total (3 × 1 × 1 × 1 × 16 = 48) is computed at display time from `snippets.targets.prompt` + the prompt template + the active sets' content. With `batchCount: 10`, the resolver samples 10 of the 48 combinations using the form's seed.
+In batch mode, the cartesian total (3 × 1 × 1 × 1 × 16 = 48) is computed at display time from `params.snippets.targets.prompt` + the prompt template + the active sets' content. With `batchCount: 10`, the resolver samples 10 of the 48 combinations using the form's seed.
 
 Alice didn't make explicit picks (defaults applied) so every `selections` array is empty. Had she selected, say, just `["Zelda"]` for `#character`, that entry's `selections` would read `[{ "categoryId": 700, "values": ["blonde hair, green tunic, ..."] }]` — `categoryId` is the canonical source pointer (the parent `wildcardSetId` is reachable through the FK on `WildcardSetCategory`), `values` is the array of value strings for re-edit/display without lookups.
 

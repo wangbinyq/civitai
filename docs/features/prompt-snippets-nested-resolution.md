@@ -217,33 +217,37 @@ Snippet metadata lives on the **workflow** (the parent of all steps in the submi
 ```jsonc
 {
   // workflow.metadata
-  "snippets": {
-    "wildcardSetIds": [201],                // MyFantasyPack v1.0 was the only active set
-    "mode": "batch",
-    "batchCount": 2,
-    "targets": {
-      "prompt": [
-        {
-          "category": "character",
-          "selections": [
-            { "categoryId": 401, "values": ["#hero"] }  // parent value; nested expansion not stored
-          ]
-        },
-        {
-          "category": "setting",
-          "selections": []                              // empty = full-pool default
-        }
-      ],
-      "negativePrompt": []
+  "params": {
+    "prompt": "A #character emerges from the shadows of #setting",   // existing — graph form data
+    /* ... other graph form fields ... */
+    "snippets": {
+      "wildcardSetIds": [201],              // MyFantasyPack v1.0 was the only active set
+      "mode": "batch",
+      "batchCount": 2,
+      "targets": {
+        "prompt": [
+          {
+            "category": "character",
+            "selections": [
+              { "categoryId": 401, "values": ["#hero"] }  // parent value; nested expansion not stored
+            ]
+          },
+          {
+            "category": "setting",
+            "selections": []                              // empty = full-pool default
+          }
+        ],
+        "negativePrompt": []
+      }
     }
   },
   "tags": [..., "wildcards"]
 }
 ```
 
-`categoryId` is the canonical pointer to the source `WildcardSetCategory` row — `wildcardSetId` is reachable through that row's FK, so we don't duplicate it. `values` is the array of picked value strings for that source category; for re-edit and display without a lookup. Nested expansion (`#hero` → paladin → `#weapon` → bloodied sword) is recoverable from the seed; not duplicated here.
+`snippets` lives under `workflow.metadata.params` — same place as the prompt template and other graph form data. `categoryId` is the canonical pointer to the source `WildcardSetCategory` row; `wildcardSetId` is reachable through that row's FK, so we don't duplicate it. `values` is the array of picked value strings for that source category; for re-edit and display without a lookup. Nested expansion (`#hero` → paladin → `#weapon` → bloodied sword) is recoverable from the seed; not duplicated here.
 
-`mode` is a per-submission choice (set by the form's mode toggle) — `"batch"` runs unique combinations, `"random"` runs independent random samples. `batchCount` is the number of workflow steps to fan out into. References are organized by target (here just `prompt`; `negativePrompt` is empty `[]` in this example, future editors would add their own keys). Cartesian totals and sample stats aren't stored — they're computable from `snippets.targets[*]` + the corresponding template strings at display time.
+`mode` is a per-submission choice (set by the form's mode toggle) — `"batch"` runs unique combinations, `"random"` runs independent random samples. `batchCount` is the number of workflow steps to fan out into. References are organized by target (here just `prompt`; `negativePrompt` is empty `[]` in this example, future editors would add their own keys). Cartesian totals and sample stats aren't stored — they're computable from `params.snippets.targets[*]` + the corresponding template strings at display time.
 
 On the client, the entire `snippets` payload lives on a dedicated node in the existing generation graph used by `GenerationForm`. Each editor node (prompt, negativePrompt, future targets) reads its slice via `snippets.targets[<editorNodeName>]`. The node updates as the user adds/removes references and adjusts mode/count, then serializes into the workflow metadata at submit time.
 

@@ -137,7 +137,7 @@ Mockup: [docs/working/mockups/prompt-snippets-mobile/r2-slim-bottom-drawer.html]
 
 ## Submission payload
 
-Extend the `generateFromGraph` call ([generationRequestHooks.ts:216-237](../../src/components/ImageGeneration/utils/generationRequestHooks.ts#L216-L237)) to include snippet context:
+Extend the `generateFromGraph` call ([generationRequestHooks.ts:216-237](../../src/components/ImageGeneration/utils/generationRequestHooks.ts#L216-L237)) so the **graph itself carries a new `snippets` node** alongside the existing prompt, negativePrompt, and other nodes. The submission's outer shape is unchanged — the snippets data lives inside `input` (the serialized generation-graph / ecosystem-graph), not as a sibling field.
 
 ```ts
 type SnippetReference = {
@@ -147,24 +147,26 @@ type SnippetReference = {
   selections: { categoryId: number; values: string[] }[];
 };
 
-type GenerateFromGraphInput = {
-  input: GraphInput;          // existing (already contains the form `seed`)
-  civitaiTip, creatorTip, tags, remixOfId, buzzType;  // existing
-  snippets?: {                // new
-    wildcardSetIds: number[];   // UserWildcardSet pointer IDs active at submit time
-    mode: 'batch' | 'random';   // submission-level toggle
-    batchCount: number;         // workflow steps to fan out into
-    targets: Record<string, SnippetReference[]>;
-    // Conventional target keys for v1: 'prompt', 'negativePrompt'.
-    // Extensible: future editor nodes (e.g. 'musicDescription') just add their own key.
-    // Empty target = []. No wrapper object.
-  };
+// New node inside the generation-graph. Lives next to the existing prompt/negativePrompt/
+// resources/sampler/etc. nodes. Form serializes it into `input` along with all other graph nodes.
+type SnippetsNode = {
+  wildcardSetIds: number[];   // UserWildcardSet pointer IDs active at submit time
+  mode: 'batch' | 'random';   // submission-level toggle
+  batchCount: number;         // workflow steps to fan out into
+  targets: Record<string, SnippetReference[]>;
+  // Conventional target keys for v1: 'prompt', 'negativePrompt'. Each value is a
+  // SnippetReference[] (no wrapper object). Empty target = [].
+  // Future editor nodes (e.g. 'musicDescription') just add their own key.
 };
 
-// On the client, this `snippets` payload is the serialized form of a dedicated node in the
-// existing generation graph used by GenerationForm. Each editor node has a dependency on the
-// snippets node and reads its target slice (snippets.targets[editorNodeName]) to render chips.
-// Mode and batchCount are submission-level; per-reference kind doesn't exist.
+type GenerateFromGraphInput = {
+  input: GraphInput;          // existing — now includes a SnippetsNode alongside other nodes
+  civitaiTip, creatorTip, tags, remixOfId, buzzType;  // existing, unchanged
+};
+
+// Each editor node (prompt, negativePrompt, …) has a dependency on the SnippetsNode and reads
+// its target slice (snippets.targets[editorNodeName]) to render chips. Mode and batchCount are
+// submission-level; per-reference kind doesn't exist.
 //
 // On submission, the server adds the `wildcards` tag to workflow.tags so the workflow is
 // queryable as a snippet-using submission ("did this generation use snippets?") without
