@@ -101,6 +101,16 @@ const COMIC_MODEL_CONFIG: Record<
     sizes: { label: string; width: number; height: number }[];
   }
 > = {
+  NanoBanana2: {
+    // V2 is dispatched via the ecosystem handler at
+    // `src/server/services/orchestrator/ecosystems/nano-banana.handler.ts`,
+    // which keys off the resource versionId to produce the v2 input shape.
+    engine: 'gemini',
+    baseModel: 'NanoBanana',
+    versionId: 2725610,
+    maxReferenceImages: 7,
+    sizes: nanoBananaProSizes,
+  },
   NanoBanana: {
     engine: 'gemini',
     baseModel: 'NanoBanana',
@@ -133,6 +143,21 @@ const COMIC_MODEL_CONFIG: Record<
       { label: '2:3', width: 1024, height: 1536 },
     ],
   },
+  OpenAI2: {
+    // gpt-image-2 — different API shape than v1/v1.5 (width/height, no
+    // background/seed). The ecosystem handler at
+    // `src/server/services/orchestrator/ecosystems/openai.handler.ts`
+    // resolves to that shape based on the resource versionId.
+    engine: 'openai',
+    baseModel: 'OpenAI',
+    versionId: 2880272,
+    maxReferenceImages: 7,
+    sizes: [
+      { label: '1:1', width: 1024, height: 1024 },
+      { label: '3:2', width: 1536, height: 1024 },
+      { label: '2:3', width: 1024, height: 1536 },
+    ],
+  },
   Qwen: {
     engine: 'qwen',
     baseModel: 'Qwen',
@@ -157,7 +182,7 @@ const COMIC_MODEL_CONFIG: Record<
   },
 };
 
-const DEFAULT_COMIC_MODEL = 'NanoBanana';
+const DEFAULT_COMIC_MODEL = 'NanoBanana2';
 const DEFAULT_ASPECT_RATIO = '3:4';
 
 function getComicModelConfig(baseModel?: string | null) {
@@ -418,7 +443,17 @@ const addReferenceImagesSchema = z.object({
     .max(10),
 });
 
-const comicModelEnum = z.enum(['NanoBanana', 'Flux2', 'Seedream', 'SeedreamLite', 'OpenAI', 'Qwen', 'Grok']);
+const comicModelEnum = z.enum([
+  'NanoBanana2',
+  'NanoBanana',
+  'Flux2',
+  'Seedream',
+  'SeedreamLite',
+  'OpenAI',
+  'OpenAI2',
+  'Qwen',
+  'Grok',
+]);
 
 const createPanelSchema = z.object({
   projectId: z.number().int(),
